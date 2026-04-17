@@ -5,10 +5,10 @@ import type {
   OrchestrationDecision,
   RetrievedKnowledgeSource,
   ThinkingStepDefinition
-} from "../../../shared/chat";
-import type { ClaudeProviderAdapter } from "../../providers/model/claudeProviderAdapter";
-import type { ConversationPersistenceService } from "../persistence/conversationPersistenceService";
-import type { KnowledgeRetrievalService } from "../rag/knowledgeRetrievalService";
+} from "../../../shared/chat.js";
+import type { ClaudeProviderAdapter } from "../../providers/model/claudeProviderAdapter.js";
+import type { ConversationPersistenceService } from "../persistence/conversationPersistenceService.js";
+import type { KnowledgeRetrievalService } from "../rag/knowledgeRetrievalService.js";
 
 export interface ExecuteTurnResult {
   decision: OrchestrationDecision;

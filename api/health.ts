@@ -1,4 +1,4 @@
-import { getHealthResponse } from "../server/http/chatApi";
-import { createGetRoute } from "./_utils";
+import { getHealthResponse } from "../server/http/chatApi.js";
+import { createGetRoute } from "./_utils.js";
 
 export default createGetRoute(() => getHealthResponse());

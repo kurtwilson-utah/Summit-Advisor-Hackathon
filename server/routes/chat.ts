@@ -8,7 +8,7 @@ import {
   handleThreadsList,
   handleThreadsSync,
   type JsonResponse
-} from "../http/chatApi";
+} from "../http/chatApi.js";
 
 export const chatRouter = Router();
 

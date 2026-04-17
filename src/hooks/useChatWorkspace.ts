@@ -17,11 +17,23 @@ const runtime = createChatWorkspaceRuntime({
   orchestrationService: createTurnOrchestrationService(),
   providerAdapter
 });
-const initialThreads = persistenceService.loadThreads() ?? [createEmptyThread()];
+
+function loadInitialThreadsForSession(session: EmailAccessSession | null): ChatThread[] {
+  if (session?.email) {
+    const stored = persistenceService.loadThreads(session.email);
+
+    if (stored && stored.length > 0) {
+      return stored;
+    }
+  }
+
+  return [createEmptyThread()];
+}
 
 export function useChatWorkspace(session: EmailAccessSession | null) {
-  const [threads, setThreads] = useState<ChatThread[]>(() => initialThreads);
-  const [selectedThreadId, setSelectedThreadId] = useState<string>(() => initialThreads[0].id);
+  const [threads, setThreads] = useState<ChatThread[]>(() => loadInitialThreadsForSession(session));
+  const [selectedThreadId, setSelectedThreadId] = useState<string>(() => threads[0].id);
+  const sessionEmail = session?.email ?? null;
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState<DraftAttachment[]>([]);
   const [isSending, setIsSending] = useState(false);
@@ -33,12 +45,36 @@ export function useChatWorkspace(session: EmailAccessSession | null) {
 
   useEffect(() => {
     applyTheme(defaultTheme);
+    persistenceService.clearUnscopedLegacy();
   }, []);
 
   useEffect(() => {
-    // Persist after every thread mutation so reloads behave more like a real chat client.
-    persistenceService.saveThreads(threads);
-  }, [threads]);
+    if (!sessionEmail) {
+      const emptyThread = createEmptyThread();
+      setThreads([emptyThread]);
+      setSelectedThreadId(emptyThread.id);
+      return;
+    }
+
+    const stored = persistenceService.loadThreads(sessionEmail);
+
+    if (stored && stored.length > 0) {
+      setThreads(stored);
+      setSelectedThreadId(stored[0].id);
+    } else {
+      const emptyThread = createEmptyThread();
+      setThreads([emptyThread]);
+      setSelectedThreadId(emptyThread.id);
+    }
+  }, [sessionEmail]);
+
+  useEffect(() => {
+    if (!sessionEmail) {
+      return;
+    }
+
+    persistenceService.saveThreads(sessionEmail, threads);
+  }, [threads, sessionEmail]);
 
   useEffect(() => {
     if (!session) {

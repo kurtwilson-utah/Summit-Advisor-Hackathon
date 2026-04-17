@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { env } from "./config";
+import { env } from "./config.js";
 
 export interface SignedAccessSession {
   email: string;

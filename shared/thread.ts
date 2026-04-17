@@ -1,4 +1,4 @@
-import type { AgentKey, AgentStatus, ThinkingStepDefinition } from "./chat";
+import type { AgentKey, AgentStatus, ThinkingStepDefinition } from "./chat.js";
 
 export type AttachmentKind = "image" | "pdf" | "word" | "excel" | "video" | "other";
 

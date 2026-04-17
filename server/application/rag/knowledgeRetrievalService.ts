@@ -1,8 +1,8 @@
-import type { RetrievedKnowledgeSource } from "../../../shared/chat";
+import type { RetrievedKnowledgeSource } from "../../../shared/chat.js";
 import type {
   KnowledgeRetrievalAdapter,
   RetrievedChunkCandidate
-} from "../../providers/rag/supabaseKnowledgeRetrievalAdapter";
+} from "../../providers/rag/supabaseKnowledgeRetrievalAdapter.js";
 
 const stopWords = new Set([
   "a",

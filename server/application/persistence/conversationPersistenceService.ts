@@ -2,8 +2,8 @@ import type {
   ConversationExportPayload,
   ConversationPersistenceAdapter,
   ThreadContextSnapshot
-} from "../../providers/persistence/supabasePersistenceAdapter";
-import type { ChatThread, EmailAccessSession } from "../../../shared/thread";
+} from "../../providers/persistence/supabasePersistenceAdapter.js";
+import type { ChatThread, EmailAccessSession } from "../../../shared/thread.js";
 
 export interface ConversationPersistenceService {
   loadThreadContext(threadId: string): Promise<ThreadContextSnapshot>;

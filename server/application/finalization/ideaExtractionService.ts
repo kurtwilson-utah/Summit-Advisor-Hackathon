@@ -1,5 +1,5 @@
-import type { ClaudeProviderAdapter } from "../../providers/model/claudeProviderAdapter";
-import type { ConversationExportPayload } from "../../providers/persistence/supabasePersistenceAdapter";
+import type { ClaudeProviderAdapter } from "../../providers/model/claudeProviderAdapter.js";
+import type { ConversationExportPayload } from "../../providers/persistence/supabasePersistenceAdapter.js";
 
 const ALLOWED_CATEGORIES = [
   "product catalogs and pricing",

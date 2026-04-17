@@ -1,4 +1,4 @@
-import { handleThreadsList } from "../../server/http/chatApi";
-import { createPostRoute } from "../_utils";
+import { handleThreadsList } from "../../server/http/chatApi.js";
+import { createPostRoute } from "../_utils.js";
 
 export default createPostRoute(handleThreadsList);

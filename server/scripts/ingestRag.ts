@@ -1,7 +1,7 @@
-import { env } from "../lib/config";
-import { createRagIngestionService } from "../application/rag/ragIngestionService";
-import { createDocumentExtractionAdapter } from "../providers/rag/documentExtractionAdapter";
-import { createSupabaseRagRepositoryAdapter } from "../providers/rag/supabaseRagRepositoryAdapter";
+import { env } from "../lib/config.js";
+import { createRagIngestionService } from "../application/rag/ragIngestionService.js";
+import { createDocumentExtractionAdapter } from "../providers/rag/documentExtractionAdapter.js";
+import { createSupabaseRagRepositoryAdapter } from "../providers/rag/supabaseRagRepositoryAdapter.js";
 
 async function main() {
   const service = createRagIngestionService({

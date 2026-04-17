@@ -1,16 +1,16 @@
-import { createEmailAccessService } from "../application/access/emailAccessService";
-import { createConversationFinalizationService } from "../application/finalization/conversationFinalizationService";
-import { createIdeaExtractionService } from "../application/finalization/ideaExtractionService";
-import { createOrchestrationService } from "../application/orchestration/orchestrationService";
-import { createConversationPersistenceService } from "../application/persistence/conversationPersistenceService";
-import { createKnowledgeRetrievalService } from "../application/rag/knowledgeRetrievalService";
-import { createAccessSessionSigner } from "../lib/accessSessionSigner";
-import { env } from "../lib/config";
-import { createEnvAllowlistAdapter } from "../providers/access/envAllowlistAdapter";
-import { createNotionProviderAdapter } from "../providers/integrations/notionProviderAdapter";
-import { createClaudeProviderAdapter } from "../providers/model/claudeProviderAdapter";
-import { createSupabasePersistenceAdapter } from "../providers/persistence/supabasePersistenceAdapter";
-import { createSupabaseKnowledgeRetrievalAdapter } from "../providers/rag/supabaseKnowledgeRetrievalAdapter";
+import { createEmailAccessService } from "../application/access/emailAccessService.js";
+import { createConversationFinalizationService } from "../application/finalization/conversationFinalizationService.js";
+import { createIdeaExtractionService } from "../application/finalization/ideaExtractionService.js";
+import { createOrchestrationService } from "../application/orchestration/orchestrationService.js";
+import { createConversationPersistenceService } from "../application/persistence/conversationPersistenceService.js";
+import { createKnowledgeRetrievalService } from "../application/rag/knowledgeRetrievalService.js";
+import { createAccessSessionSigner } from "../lib/accessSessionSigner.js";
+import { env } from "../lib/config.js";
+import { createEnvAllowlistAdapter } from "../providers/access/envAllowlistAdapter.js";
+import { createNotionProviderAdapter } from "../providers/integrations/notionProviderAdapter.js";
+import { createClaudeProviderAdapter } from "../providers/model/claudeProviderAdapter.js";
+import { createSupabasePersistenceAdapter } from "../providers/persistence/supabasePersistenceAdapter.js";
+import { createSupabaseKnowledgeRetrievalAdapter } from "../providers/rag/supabaseKnowledgeRetrievalAdapter.js";
 
 export function createAppServices() {
   const sessionSigner = createAccessSessionSigner();

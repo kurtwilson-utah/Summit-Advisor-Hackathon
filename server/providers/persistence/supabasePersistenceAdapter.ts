@@ -1,5 +1,5 @@
-import type { ChatMessage, ChatThread, EmailAccessSession, ThreadAgentState } from "../../../shared/thread";
-import { createSupabaseAdminClient } from "../../lib/supabaseAdmin";
+import type { ChatMessage, ChatThread, EmailAccessSession, ThreadAgentState } from "../../../shared/thread.js";
+import { createSupabaseAdminClient } from "../../lib/supabaseAdmin.js";
 
 const THREAD_TABLE = "advisor_threads";
 const MESSAGE_TABLE = "advisor_messages";
