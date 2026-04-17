@@ -1,4 +1,4 @@
-import { MessageSquareText, PanelLeft, Plus, Search } from "lucide-react";
+import { LogOut, MessageSquareText, Plus } from "lucide-react";
 import { formatHistoryTimestamp } from "../lib/chatEngine";
 import type { ChatThread } from "../lib/types";
 
@@ -8,7 +8,7 @@ interface SidebarProps {
   onSelectThread: (threadId: string) => void;
   onNewThread: () => void;
   isOpen: boolean;
-  onToggleOpen: () => void;
+  onSignOut: () => void;
 }
 
 export function Sidebar({
@@ -17,15 +17,11 @@ export function Sidebar({
   onSelectThread,
   onNewThread,
   isOpen,
-  onToggleOpen
+  onSignOut
 }: SidebarProps) {
   return (
     <aside className={`sidebar ${isOpen ? "sidebar-open" : ""}`}>
       <div className="sidebar-top">
-        <button className="sidebar-toggle" onClick={onToggleOpen} type="button" aria-label="Toggle sidebar">
-          <PanelLeft size={18} />
-        </button>
-
         <div>
           <p className="eyebrow">Cyncly Advisor</p>
           <h1>Chats</h1>
@@ -36,11 +32,6 @@ export function Sidebar({
         <Plus size={18} />
         New chat
       </button>
-
-      <label className="search-shell" aria-label="Search chats">
-        <Search size={16} />
-        <input disabled placeholder="Search threads (hook up later)" />
-      </label>
 
       <div className="sidebar-section">
         <div className="section-heading">
@@ -73,6 +64,13 @@ export function Sidebar({
             );
           })}
         </div>
+      </div>
+
+      <div className="sidebar-footer">
+        <button className="secondary-button sidebar-signout" onClick={onSignOut} type="button">
+          <LogOut size={14} />
+          Sign out
+        </button>
       </div>
     </aside>
   );

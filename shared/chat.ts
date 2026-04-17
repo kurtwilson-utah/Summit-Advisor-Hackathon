@@ -30,6 +30,8 @@ export interface ChatAttachmentPayload {
   name: string;
   mimeType: string;
   kind: string;
+  sizeBytes: number;
+  dataBase64: string;
 }
 
 export interface RetrievedKnowledgeSource {

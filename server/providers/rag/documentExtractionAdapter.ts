@@ -1,4 +1,6 @@
 import mammoth from "mammoth";
+import { PDFParse } from "pdf-parse";
+import * as XLSX from "xlsx";
 
 export interface ExtractionResult {
   text: string;
@@ -33,6 +35,44 @@ export function createDocumentExtractionAdapter(): DocumentExtractionAdapter {
       }
 
       if (extension === "csv") {
+        const text = normalizeText(buffer.toString("utf8"));
+
+        return {
+          text,
+          metadata: buildExtractionMetadata({ storagePath, text, warnings: [] })
+        };
+      }
+
+      if (extension === "xlsx" || extension === "xls") {
+        const workbook = XLSX.read(buffer, { type: "buffer" });
+        const text = normalizeText(
+          workbook.SheetNames.map((sheetName) => {
+            const sheet = workbook.Sheets[sheetName];
+            const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false }).trim();
+
+            return csv ? `Sheet: ${sheetName}\n${csv}` : `Sheet: ${sheetName}`;
+          }).join("\n\n")
+        );
+
+        return {
+          text,
+          metadata: buildExtractionMetadata({ storagePath, text, warnings: [] })
+        };
+      }
+
+      if (extension === "pdf") {
+        const parser = new PDFParse({ data: buffer });
+        const result = await parser.getText();
+        const text = normalizeText(result.text);
+        await parser.destroy();
+
+        return {
+          text,
+          metadata: buildExtractionMetadata({ storagePath, text, warnings: [] })
+        };
+      }
+
+      if (extension === "txt" || extension === "md") {
         const text = normalizeText(buffer.toString("utf8"));
 
         return {

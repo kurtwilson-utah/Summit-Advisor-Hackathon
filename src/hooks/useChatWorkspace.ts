@@ -2,7 +2,7 @@ import { appConfig } from "../config/appConfig";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createAttachmentDraft, createEmptyThread } from "../lib/chatEngine";
 import { applyTheme, defaultTheme } from "../lib/theme";
-import type { ActiveThinkingState, ChatThread, DraftAttachment, EmailAccessSession } from "../lib/types";
+import type { ActiveThinkingState, ChatThread, EmailAccessSession, PendingAttachmentDraft } from "../lib/types";
 import { createThreadFinalizationService } from "../services/finalization/threadFinalizationService";
 import { createTurnOrchestrationService } from "../services/orchestration/turnOrchestrationService";
 import { createThreadPersistenceService } from "../services/persistence/threadPersistenceService";
@@ -35,7 +35,7 @@ export function useChatWorkspace(session: EmailAccessSession | null) {
   const [selectedThreadId, setSelectedThreadId] = useState<string>(() => threads[0].id);
   const sessionEmail = session?.email ?? null;
   const [draft, setDraft] = useState("");
-  const [attachments, setAttachments] = useState<DraftAttachment[]>([]);
+  const [attachments, setAttachments] = useState<PendingAttachmentDraft[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
     typeof window === "undefined" ? true : window.innerWidth > 940
@@ -247,17 +247,29 @@ export function useChatWorkspace(session: EmailAccessSession | null) {
         keepalive
       });
 
-      updateThread(thread.id, (currentThread) => ({
-        ...currentThread,
-        notionStatus: "Transcript synced"
-      }));
+      updateThread(thread.id, (currentThread) => {
+        if (hasThreadAdvancedSinceFinalizationRequest(currentThread, thread)) {
+          return currentThread;
+        }
+
+        return {
+          ...currentThread,
+          notionStatus: "Transcript synced"
+        };
+      });
     } catch (error) {
       console.error("Unable to finalize conversation.", error);
 
-      updateThread(thread.id, (currentThread) => ({
-        ...currentThread,
-        notionStatus: "Finalization failed"
-      }));
+      updateThread(thread.id, (currentThread) => {
+        if (hasThreadAdvancedSinceFinalizationRequest(currentThread, thread)) {
+          return currentThread;
+        }
+
+        return {
+          ...currentThread,
+          notionStatus: "Finalization failed"
+        };
+      });
     } finally {
       finalizingThreadIdsRef.current.delete(thread.id);
     }
@@ -295,5 +307,12 @@ function mergeThreads(remoteThreads: ChatThread[], localThreads: ChatThread[]) {
 
   return Array.from(mergedThreads.values()).sort(
     (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+  );
+}
+
+function hasThreadAdvancedSinceFinalizationRequest(currentThread: ChatThread, finalizedThread: ChatThread) {
+  return (
+    currentThread.updatedAt !== finalizedThread.updatedAt ||
+    currentThread.messages.length !== finalizedThread.messages.length
   );
 }

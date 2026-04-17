@@ -1,10 +1,12 @@
-import { ImagePlus, Paperclip, Send, X } from "lucide-react";
-import type { DraftAttachment } from "../lib/types";
+import { useEffect, useRef, type KeyboardEvent } from "react";
+import { Paperclip, Send, X } from "lucide-react";
+import type { PendingAttachmentDraft } from "../lib/types";
 
 interface ComposerProps {
   draft: string;
-  attachments: DraftAttachment[];
+  attachments: PendingAttachmentDraft[];
   isSending: boolean;
+  maxHeight: number;
   onDraftChange: (value: string) => void;
   onAddFiles: (files: FileList | null) => void;
   onRemoveAttachment: (attachmentId: string) => void;
@@ -15,18 +17,42 @@ export function Composer({
   draft,
   attachments,
   isSending,
+  maxHeight,
   onDraftChange,
   onAddFiles,
   onRemoveAttachment,
   onSend
 }: ComposerProps) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    textarea.style.height = "auto";
+
+    const nextHeight = Math.min(textarea.scrollHeight, maxHeight);
+    textarea.style.height = `${Math.max(44, nextHeight)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [draft, maxHeight]);
+
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (!isSending) {
+      onSend();
+    }
+  }
+
   return (
     <section className="composer-shell">
-      <div className="composer-info">
-        <span>Client-side protection is enabled before Claude dispatch.</span>
-        <span>Attachments stay private until the backend ingestion pipeline is connected.</span>
-      </div>
-
       {attachments.length ? (
         <div className="composer-attachments">
           {attachments.map((attachment) => (
@@ -47,25 +73,19 @@ export function Composer({
       ) : null}
 
       <div className="composer-panel">
-        <div className="composer-left-actions">
-          <label className="secondary-button icon-action">
-            <Paperclip size={16} />
-            <span>Attach</span>
-            <input hidden multiple onChange={(event) => onAddFiles(event.target.files)} type="file" />
-          </label>
-
-          <label className="secondary-button icon-action">
-            <ImagePlus size={16} />
-            <span>Image</span>
-            <input accept="image/*" hidden multiple onChange={(event) => onAddFiles(event.target.files)} type="file" />
-          </label>
-        </div>
+        <label className="secondary-button icon-action composer-attach-action">
+          <Paperclip size={16} />
+          <span>Attach</span>
+          <input hidden multiple onChange={(event) => onAddFiles(event.target.files)} type="file" />
+        </label>
 
         <textarea
+          ref={textareaRef}
           value={draft}
           onChange={(event) => onDraftChange(event.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder="Message Cyncly Advisor..."
-          rows={3}
+          rows={1}
         />
 
         <button

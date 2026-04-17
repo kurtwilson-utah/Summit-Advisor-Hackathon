@@ -1,10 +1,10 @@
-import type { ChatMessage, ChatThread, DraftAttachment, OrchestrationDecision } from "../../lib/types";
+import type { ChatMessage, ChatThread, OrchestrationDecision, PendingAttachmentDraft } from "../../lib/types";
 
 export interface ConversationProviderAdapter {
   createAssistantMessage(args: {
     thread: ChatThread;
     userMessage: ChatMessage;
     decision: OrchestrationDecision;
-    attachments: DraftAttachment[];
+    attachments: PendingAttachmentDraft[];
   }): Promise<ChatMessage>;
 }

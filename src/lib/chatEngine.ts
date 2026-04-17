@@ -3,6 +3,7 @@ import type {
   ChatMessage,
   ChatThread,
   DraftAttachment,
+  PendingAttachmentDraft,
   ThreadAgentState
 } from "./types";
 
@@ -48,13 +49,26 @@ export function formatBytes(size: number): string {
   return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
 }
 
-export function createAttachmentDraft(file: File): DraftAttachment {
+export function createAttachmentDraft(file: File): PendingAttachmentDraft {
   return {
     id: crypto.randomUUID(),
+    file,
     name: file.name,
     mimeType: file.type || "application/octet-stream",
+    sizeBytes: file.size,
     sizeLabel: formatBytes(file.size),
     kind: describeAttachmentKind(file)
+  };
+}
+
+export function stripPendingAttachment(attachment: PendingAttachmentDraft): DraftAttachment {
+  return {
+    id: attachment.id,
+    name: attachment.name,
+    mimeType: attachment.mimeType,
+    sizeBytes: attachment.sizeBytes,
+    sizeLabel: attachment.sizeLabel,
+    kind: attachment.kind
   };
 }
 

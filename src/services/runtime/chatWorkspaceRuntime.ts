@@ -2,10 +2,11 @@ import type { ThinkingStepDefinition } from "../../../shared/chat";
 import {
   createEmptyThread,
   deriveThreadTitle,
+  stripPendingAttachment,
   summarizeThread
 } from "../../lib/chatEngine";
 import { redactText } from "../../lib/piiRedaction";
-import type { ChatMessage, ChatThread, DraftAttachment } from "../../lib/types";
+import type { ChatMessage, ChatThread, PendingAttachmentDraft } from "../../lib/types";
 import type { ThreadFinalizationService } from "../finalization/threadFinalizationService";
 import type { TurnOrchestrationService } from "../orchestration/turnOrchestrationService";
 import type { ConversationProviderAdapter } from "../providers/conversationProvider";
@@ -15,7 +16,7 @@ export interface ChatWorkspaceRuntime {
   submitTurn(args: {
     thread: ChatThread;
     draft: string;
-    attachments: DraftAttachment[];
+    attachments: PendingAttachmentDraft[];
     onOptimisticUpdate: (thread: ChatThread) => void;
     onThinkingStep: (step: ThinkingStepDefinition | null) => void;
     onComplete: (thread: ChatThread) => void;
@@ -40,6 +41,7 @@ export function createChatWorkspaceRuntime(dependencies: {
 
       const now = new Date().toISOString();
       const redaction = redactText(trimmedDraft);
+      const storedAttachments = attachments.map(stripPendingAttachment);
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
@@ -47,7 +49,7 @@ export function createChatWorkspaceRuntime(dependencies: {
         bodyDisplay: trimmedDraft || "Attached files",
         bodyModel: redaction.redactedText,
         createdAt: now,
-        attachments,
+        attachments: storedAttachments,
         redaction
       };
 

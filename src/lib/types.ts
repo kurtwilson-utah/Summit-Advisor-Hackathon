@@ -11,6 +11,7 @@ export type {
   RedactionEntityType,
   ThreadAgentState
 } from "../../shared/thread";
+import type { DraftAttachment } from "../../shared/thread";
 
 export interface ThemeSettings {
   name: string;
@@ -35,4 +36,8 @@ export interface ThemeSettings {
   warning: string;
   shadow: string;
   bubbleShadow: string;
+}
+
+export interface PendingAttachmentDraft extends DraftAttachment {
+  file: File;
 }

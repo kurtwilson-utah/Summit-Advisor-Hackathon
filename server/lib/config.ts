@@ -16,6 +16,7 @@ const envSchema = z.object({
   SUPABASE_PUBLISHABLE_KEY: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   SUPABASE_STORAGE_BUCKET: z.string().default("rag-private"),
+  SUPABASE_CHAT_ATTACHMENTS_BUCKET: z.string().default("chat-attachments"),
   AGENT_PRIMARY_PROMPT_PATH: z.string().default("prompts/summit-product-manager.md"),
   AGENT_KNOWLEDGE_PROMPT_PATH: z.string().default("prompts/summit-knowledge-agent.md"),
   AGENT_RESEARCH_PROMPT_PATH: z.string().default("prompts/third-party-research-agent.md")

@@ -112,6 +112,11 @@ export function createNotionProviderAdapter(): NotionProviderAdapter {
         ideaPageIds.push(page.id);
       }
 
+      await archivePreviousExportPages(notion, {
+        previousTranscriptPageId: conversation.exportState.transcriptPageId,
+        previousIdeaPageIds: conversation.exportState.ideaPageIds
+      });
+
       return {
         transcriptPageId: transcriptPage.id,
         ideaPageIds
@@ -362,4 +367,30 @@ function humanizeCloseReason(closeReason: string) {
     default:
       return closeReason;
   }
+}
+
+async function archivePreviousExportPages(
+  notion: Client,
+  args: {
+    previousTranscriptPageId: string | null;
+    previousIdeaPageIds: string[];
+  }
+) {
+  const previousPageIds = [
+    args.previousTranscriptPageId,
+    ...args.previousIdeaPageIds
+  ].filter((pageId): pageId is string => Boolean(pageId));
+
+  if (previousPageIds.length === 0) {
+    return;
+  }
+
+  await Promise.all(
+    previousPageIds.map((pageId) =>
+      notion.pages.update({
+        page_id: pageId,
+        archived: true
+      })
+    )
+  );
 }

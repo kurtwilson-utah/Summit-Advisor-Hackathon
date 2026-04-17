@@ -1,4 +1,5 @@
 import { createEmailAccessService } from "../application/access/emailAccessService.js";
+import { createChatAttachmentProcessingService } from "../application/attachments/chatAttachmentProcessingService.js";
 import { createConversationFinalizationService } from "../application/finalization/conversationFinalizationService.js";
 import { createIdeaExtractionService } from "../application/finalization/ideaExtractionService.js";
 import { createOrchestrationService } from "../application/orchestration/orchestrationService.js";
@@ -7,9 +8,11 @@ import { createKnowledgeRetrievalService } from "../application/rag/knowledgeRet
 import { createAccessSessionSigner } from "../lib/accessSessionSigner.js";
 import { env } from "../lib/config.js";
 import { createEnvAllowlistAdapter } from "../providers/access/envAllowlistAdapter.js";
+import { createSupabaseChatAttachmentStorageAdapter } from "../providers/attachments/supabaseChatAttachmentStorageAdapter.js";
 import { createNotionProviderAdapter } from "../providers/integrations/notionProviderAdapter.js";
 import { createClaudeProviderAdapter } from "../providers/model/claudeProviderAdapter.js";
 import { createSupabasePersistenceAdapter } from "../providers/persistence/supabasePersistenceAdapter.js";
+import { createDocumentExtractionAdapter } from "../providers/rag/documentExtractionAdapter.js";
 import { createSupabaseKnowledgeRetrievalAdapter } from "../providers/rag/supabaseKnowledgeRetrievalAdapter.js";
 
 export function createAppServices() {
@@ -17,6 +20,10 @@ export function createAppServices() {
   const claudeAdapter = createClaudeProviderAdapter();
   const persistenceService = createConversationPersistenceService({
     adapter: createSupabasePersistenceAdapter()
+  });
+  const attachmentProcessingService = createChatAttachmentProcessingService({
+    extractionAdapter: createDocumentExtractionAdapter(),
+    storageAdapter: createSupabaseChatAttachmentStorageAdapter()
   });
   const knowledgeRetrievalService = createKnowledgeRetrievalService({
     adapter: createSupabaseKnowledgeRetrievalAdapter()
@@ -29,6 +36,7 @@ export function createAppServices() {
     }),
     persistenceService,
     orchestrationService: createOrchestrationService({
+      attachmentProcessingService,
       claudeAdapter,
       persistenceService,
       knowledgeRetrievalService

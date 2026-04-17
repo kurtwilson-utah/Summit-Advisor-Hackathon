@@ -6,6 +6,10 @@ import type {
   RetrievedKnowledgeSource,
   ThinkingStepDefinition
 } from "../../../shared/chat.js";
+import type {
+  ChatAttachmentProcessingService,
+  ProcessedChatAttachment
+} from "../attachments/chatAttachmentProcessingService.js";
 import type { ClaudeProviderAdapter } from "../../providers/model/claudeProviderAdapter.js";
 import type { ConversationPersistenceService } from "../persistence/conversationPersistenceService.js";
 import type { KnowledgeRetrievalService } from "../rag/knowledgeRetrievalService.js";
@@ -30,6 +34,7 @@ export interface OrchestrationService {
 }
 
 export function createOrchestrationService(dependencies: {
+  attachmentProcessingService: ChatAttachmentProcessingService;
   claudeAdapter: ClaudeProviderAdapter;
   persistenceService: ConversationPersistenceService;
   knowledgeRetrievalService: KnowledgeRetrievalService;
@@ -37,10 +42,14 @@ export function createOrchestrationService(dependencies: {
   return {
     async executeTurn({ threadId, threadTitle, bodyRedacted, attachments, memoryDigest, recentMessages = [] }) {
       const persistedContext = await dependencies.persistenceService.loadThreadContext(threadId);
+      const processedAttachments = await dependencies.attachmentProcessingService.processAttachments({
+        threadId,
+        attachments
+      });
       const decision = decideDelegation(bodyRedacted, attachments.length);
       const prompts = await loadPrompts(dependencies.claudeAdapter, decision);
       const effectiveMemoryDigest = memoryDigest?.trim() || persistedContext.memoryDigest;
-      const warnings: string[] = [];
+      const warnings: string[] = [...processedAttachments.warnings];
 
       const knowledgeResult = decision.delegatedAgents.includes("summit-knowledge-agent")
         ? await dependencies.knowledgeRetrievalService.retrieveRelevantKnowledge({
@@ -59,6 +68,7 @@ export function createOrchestrationService(dependencies: {
               memoryDigest: effectiveMemoryDigest,
               recentMessages,
               attachments,
+              processedAttachments: processedAttachments.attachments,
               instructions: [
                 "Use only the supplied Summit knowledge snippets.",
                 "Extract the most direct answer you can from the retrieved material before suggesting follow-up questions.",
@@ -78,7 +88,8 @@ export function createOrchestrationService(dependencies: {
             userPrompt: buildResearchPrompt({
               userMessage: bodyRedacted,
               memoryDigest: effectiveMemoryDigest,
-              recentMessages
+              recentMessages,
+              processedAttachments: processedAttachments.attachments
             }),
             maxTokens: 500
           })
@@ -95,14 +106,16 @@ export function createOrchestrationService(dependencies: {
             threadTitle,
             userMessage: bodyRedacted,
             memoryDigest: effectiveMemoryDigest,
-          recentMessages,
-          attachments,
-          knowledgeMemo,
-          researchMemo,
-          sources: knowledgeResult.sources,
+            recentMessages,
+            attachments,
+            processedAttachments: processedAttachments.attachments,
+            knowledgeMemo,
+            researchMemo,
+            sources: knowledgeResult.sources,
             warnings
           }),
-          maxTokens: 900
+          maxTokens: 900,
+          images: processedAttachments.imageInputs
         })
       );
 
@@ -197,6 +210,7 @@ function buildSpecialistPrompt(args: {
   memoryDigest: string;
   recentMessages: ChatTurnMessagePayload[];
   attachments: ChatAttachmentPayload[];
+  processedAttachments: ProcessedChatAttachment[];
   instructions: string[];
   sources: RetrievedKnowledgeSource[];
 }) {
@@ -205,6 +219,7 @@ function buildSpecialistPrompt(args: {
     `Thread memory digest:\n${args.memoryDigest}`,
     formatRecentMessages(args.recentMessages),
     formatAttachments(args.attachments),
+    formatProcessedAttachments(args.processedAttachments),
     `Retrieved knowledge for this turn:\n${formatSources(args.sources)}`,
     `Instructions for this memo:\n${args.instructions.map((instruction) => `- ${instruction}`).join("\n")}`,
     `Return a short internal memo addressed to the ${args.audience}.`
@@ -217,11 +232,13 @@ function buildResearchPrompt(args: {
   userMessage: string;
   memoryDigest: string;
   recentMessages: ChatTurnMessagePayload[];
+  processedAttachments: ProcessedChatAttachment[];
 }) {
   return [
     `Customer message:\n${args.userMessage}`,
     `Thread memory digest:\n${args.memoryDigest}`,
     formatRecentMessages(args.recentMessages),
+    formatProcessedAttachments(args.processedAttachments),
     "Constraints:",
     "- Live web browsing is not available in this runtime.",
     "- Do not invent sources, links, or user quotes.",
@@ -238,6 +255,7 @@ function buildPrimaryPrompt(args: {
   memoryDigest: string;
   recentMessages: ChatTurnMessagePayload[];
   attachments: ChatAttachmentPayload[];
+  processedAttachments: ProcessedChatAttachment[];
   knowledgeMemo: string;
   researchMemo: string;
   sources: RetrievedKnowledgeSource[];
@@ -249,6 +267,7 @@ function buildPrimaryPrompt(args: {
     `Compressed thread memory:\n${args.memoryDigest}`,
     formatRecentMessages(args.recentMessages),
     formatAttachments(args.attachments),
+    formatProcessedAttachments(args.processedAttachments),
     args.knowledgeMemo ? `Summit Knowledge Agent memo:\n${args.knowledgeMemo}` : "",
     args.researchMemo ? `Third-party research memo:\n${args.researchMemo}` : "",
     args.sources.length > 0
@@ -285,8 +304,38 @@ function formatAttachments(attachments: ChatAttachmentPayload[]) {
   }
 
   return `Attachment metadata:\n${attachments
-    .map((attachment) => `- ${attachment.name} (${attachment.kind}, ${attachment.mimeType})`)
+    .map((attachment) => `- ${attachment.name} (${attachment.kind}, ${attachment.mimeType}, ${attachment.sizeBytes} bytes)`)
     .join("\n")}`;
+}
+
+function formatProcessedAttachments(attachments: ProcessedChatAttachment[]) {
+  if (attachments.length === 0) {
+    return "";
+  }
+
+  return [
+    "Live attachment content for this turn:",
+    ...attachments.map((attachment) => {
+      const sections = [
+        `Attachment: ${attachment.attachment.name}`,
+        `Stored in Supabase: ${attachment.storageBucket}/${attachment.storagePath}`
+      ];
+
+      if (attachment.extractedText) {
+        sections.push(`Extracted text:\n${attachment.extractedText}`);
+      }
+
+      if (!attachment.extractedText && attachment.attachment.kind === "image") {
+        sections.push("Image was supplied directly to Claude vision input for this turn.");
+      }
+
+      if (attachment.warnings.length > 0) {
+        sections.push(`Warnings:\n${attachment.warnings.map((warning) => `- ${warning}`).join("\n")}`);
+      }
+
+      return sections.join("\n");
+    })
+  ].join("\n\n");
 }
 
 function formatSources(sources: RetrievedKnowledgeSource[]) {

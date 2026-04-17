@@ -1,4 +1,5 @@
-import { Database, Lock, LogOut, PanelLeft, Sparkles } from "lucide-react";
+import { PanelLeft } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Composer } from "./components/Composer";
 import { EmailGate } from "./components/EmailGate";
 import { MessageBubble } from "./components/MessageBubble";
@@ -6,7 +7,6 @@ import { Sidebar } from "./components/Sidebar";
 import { ThinkingIndicator } from "./components/ThinkingIndicator";
 import { useEmailAccess } from "./hooks/useEmailAccess";
 import { useChatWorkspace } from "./hooks/useChatWorkspace";
-import { defaultTheme } from "./lib/theme";
 
 function App() {
   const {
@@ -34,13 +34,54 @@ function App() {
     setSelectedThreadId,
     threads
   } = useChatWorkspace(session);
-  const supportingAgentCount = activeThread.agentStates.filter(
-    (agent) => agent.key !== "summit-product-manager"
-  ).length;
+  const conversationWindowRef = useRef<HTMLElement | null>(null);
+  const conversationEndRef = useRef<HTMLDivElement | null>(null);
+  const [composerMaxHeight, setComposerMaxHeight] = useState(180);
 
   function isMobileViewport() {
     return typeof window !== "undefined" && window.matchMedia("(max-width: 940px)").matches;
   }
+
+  useEffect(() => {
+    const windowElement = conversationWindowRef.current;
+
+    if (!windowElement) {
+      return;
+    }
+
+    const updateComposerMaxHeight = () => {
+      setComposerMaxHeight(Math.max(120, Math.floor(windowElement.clientHeight / 3)));
+    };
+
+    updateComposerMaxHeight();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateComposerMaxHeight);
+
+      return () => {
+        window.removeEventListener("resize", updateComposerMaxHeight);
+      };
+    }
+
+    const observer = new ResizeObserver(updateComposerMaxHeight);
+    observer.observe(windowElement);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      conversationEndRef.current?.scrollIntoView({
+        block: "end"
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [activeThread.id, activeThread.messages.length, activeThinkingState?.step.key]);
 
   function handleSelectThread(threadId: string) {
     setSelectedThreadId(threadId);
@@ -71,7 +112,7 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${isSidebarOpen ? "app-shell-sidebar-open" : "app-shell-sidebar-closed"}`}>
       <button
         aria-hidden={!isSidebarOpen}
         aria-label="Close chat history"
@@ -86,36 +127,29 @@ function App() {
         onSelectThread={handleSelectThread}
         onNewThread={handleCreateThread}
         isOpen={isSidebarOpen}
-        onToggleOpen={() => setIsSidebarOpen((current) => !current)}
+        onSignOut={signOut}
       />
 
       <main className="workspace">
         <header className="app-header">
           <div className="header-title-group">
             <button
-              className="mobile-sidebar-button secondary-button"
+              aria-label={isSidebarOpen ? "Hide chat history" : "Show chat history"}
+              className="sidebar-launcher-button secondary-button"
               onClick={() => setIsSidebarOpen((current) => !current)}
               type="button"
             >
-              <PanelLeft size={18} />
+              <PanelLeft size={22} />
             </button>
 
             <div>
               <h2>{activeThread.title}</h2>
             </div>
           </div>
-
-          <div className="header-badges">
-            <button className="secondary-button header-signout" onClick={signOut} type="button">
-              <LogOut size={14} />
-              Sign out
-            </button>
-          </div>
         </header>
 
-        <section className="conversation-window">
+        <section className="conversation-window" ref={conversationWindowRef}>
           <div className="conversation-inner">
-
             <section className="message-list">
               {activeThread.messages.map((message) => (
                 <MessageBubble key={message.id} message={message} />
@@ -123,6 +157,7 @@ function App() {
               {activeThinkingState?.threadId === activeThread.id ? (
                 <ThinkingIndicator step={activeThinkingState.step} />
               ) : null}
+              <div aria-hidden="true" ref={conversationEndRef} />
             </section>
           </div>
         </section>
@@ -136,6 +171,7 @@ function App() {
             onAddFiles={handleAddFiles}
             onRemoveAttachment={handleRemoveAttachment}
             onSend={handleSend}
+            maxHeight={composerMaxHeight}
           />
         </footer>
       </main>

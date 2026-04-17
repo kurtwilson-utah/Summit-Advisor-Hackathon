@@ -15,6 +15,10 @@ export interface ClaudeCompletionRequest {
   userPrompt: string;
   maxTokens: number;
   temperature?: number;
+  images?: Array<{
+    base64Data: string;
+    mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+  }>;
 }
 
 export interface ClaudeProviderAdapter {
@@ -36,7 +40,7 @@ export function createClaudeProviderAdapter(): ClaudeProviderAdapter {
 
       return readFile(resolvedPath, "utf8");
     },
-    async complete({ systemPrompt, userPrompt, maxTokens, temperature = 0.2 }) {
+    async complete({ systemPrompt, userPrompt, maxTokens, temperature = 0.2, images = [] }) {
       if (!client) {
         return [
           "Claude is not configured yet.",
@@ -51,6 +55,24 @@ export function createClaudeProviderAdapter(): ClaudeProviderAdapter {
 
       for (const model of modelCandidates) {
         try {
+          const messageContent =
+            images.length > 0
+              ? [
+                  ...images.map((image) => ({
+                    type: "image" as const,
+                    source: {
+                      type: "base64" as const,
+                      media_type: image.mediaType,
+                      data: image.base64Data
+                    }
+                  })),
+                  {
+                    type: "text" as const,
+                    text: userPrompt
+                  }
+                ]
+              : userPrompt;
+
           const response = await client.messages.create({
             model,
             max_tokens: maxTokens,
@@ -59,7 +81,7 @@ export function createClaudeProviderAdapter(): ClaudeProviderAdapter {
             messages: [
               {
                 role: "user",
-                content: userPrompt
+                content: messageContent
               }
             ]
           });

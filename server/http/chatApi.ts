@@ -8,6 +8,8 @@ const attachmentSchema = z.object({
   name: z.string(),
   mimeType: z.string(),
   kind: z.enum(["image", "pdf", "word", "excel", "video", "other"]),
+  sizeBytes: z.number().nonnegative().default(0),
+  dataBase64: z.string().default(""),
   sizeLabel: z.string().default("")
 });
 
@@ -73,7 +75,9 @@ const chatRequestSchema = z.object({
         id: z.string(),
         name: z.string(),
         mimeType: z.string(),
-        kind: z.string()
+        kind: z.string(),
+        sizeBytes: z.number().nonnegative().default(0),
+        dataBase64: z.string().default("")
       })
     )
     .default([]),

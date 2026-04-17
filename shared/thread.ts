@@ -8,6 +8,7 @@ export interface DraftAttachment {
   id: string;
   name: string;
   mimeType: string;
+  sizeBytes: number;
   sizeLabel: string;
   kind: AttachmentKind;
 }

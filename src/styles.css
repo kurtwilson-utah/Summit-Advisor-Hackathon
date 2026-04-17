@@ -63,6 +63,11 @@ button {
   height: 100dvh;
   min-height: 100dvh;
   overflow: hidden;
+  transition: grid-template-columns 220ms ease;
+}
+
+.app-shell-sidebar-closed {
+  grid-template-columns: 0 minmax(0, 1fr);
 }
 
 .email-gate {
@@ -149,7 +154,9 @@ button {
   flex-direction: column;
   gap: 18px;
   min-height: 100vh;
+  min-width: 0;
   padding: 24px 20px;
+  transition: opacity 220ms ease, padding 220ms ease, border-color 220ms ease;
 }
 
 .sidebar-backdrop {
@@ -159,8 +166,7 @@ button {
 .sidebar-top,
 .thread-card-footer,
 .section-heading,
-.message-meta,
-.composer-info {
+.message-meta {
   align-items: center;
   display: flex;
   justify-content: space-between;
@@ -168,28 +174,24 @@ button {
 }
 
 .header-title-group {
-  align-items: flex-start;
+  align-items: center;
   display: flex;
   gap: 12px;
   justify-content: flex-start;
   min-width: 0;
 }
 
-.sidebar-toggle,
-.mobile-sidebar-button {
+.sidebar-launcher-button {
   align-items: center;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--text-strong);
   display: inline-flex;
-  height: 38px;
+  flex: 0 0 auto;
+  height: 42px;
   justify-content: center;
-  width: 38px;
-}
-
-.mobile-sidebar-button {
-  display: none;
+  width: 42px;
 }
 
 .eyebrow {
@@ -241,26 +243,6 @@ button {
   padding: 9px 14px;
 }
 
-.search-shell {
-  align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text-muted);
-  display: flex;
-  gap: 10px;
-  padding: 0 14px;
-}
-
-.search-shell input {
-  background: transparent;
-  border: 0;
-  color: inherit;
-  flex: 1;
-  height: 44px;
-  outline: none;
-}
-
 .sidebar-section {
   display: flex;
   flex: 1;
@@ -286,12 +268,14 @@ button {
 .thread-list {
   min-height: 0;
   overflow: auto;
+  padding-bottom: 4px;
+  padding-top: 6px;
   padding-right: 4px;
 }
 
 .thread-card {
-  background: var(--surface-muted);
-  border: 1px solid transparent;
+  background: var(--surface);
+  border: 1px solid var(--divider);
   border-radius: 16px;
   color: inherit;
   padding: 16px;
@@ -303,6 +287,14 @@ button {
 .thread-card-selected {
   border-color: var(--border);
   transform: translateY(-1px);
+}
+
+.sidebar-footer {
+  padding-top: 12px;
+}
+
+.sidebar-signout {
+  width: 100%;
 }
 
 .thread-title-group {
@@ -413,6 +405,7 @@ button {
 .conversation-window {
   background: var(--background-canvas);
   overflow: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
@@ -448,9 +441,11 @@ button {
 }
 
 .message-row {
-  align-items: flex-end;
+  align-items: flex-start;
   display: flex;
   gap: 14px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .message-row-user {
@@ -471,6 +466,8 @@ button {
   display: inline-flex;
   height: 36px;
   justify-content: center;
+  margin-top: 2px;
+  align-self: flex-start;
   min-width: 36px;
   width: 36px;
 }
@@ -480,6 +477,8 @@ button {
   border-radius: 6px 16px 16px 16px;
   box-shadow: var(--bubble-shadow);
   max-width: min(780px, calc(100% - 50px));
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding: 14px 16px;
   width: fit-content;
 }
@@ -514,6 +513,8 @@ button {
   flex-direction: column;
   gap: 10px;
   max-width: min(780px, calc(100% - 50px));
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding: 14px 16px;
   width: fit-content;
 }
@@ -521,20 +522,6 @@ button {
 .thinking-bubble p {
   color: var(--text-strong);
   margin: 0;
-}
-
-.thinking-meta {
-  display: flex;
-}
-
-.thinking-agent-pill {
-  align-items: center;
-  background: var(--accent-soft);
-  border-radius: 999px;
-  color: var(--accent);
-  display: inline-flex;
-  gap: 6px;
-  padding: 6px 10px;
 }
 
 .thinking-dots {
@@ -574,16 +561,16 @@ button {
   gap: 12px;
 }
 
-.composer-info {
-  gap: 8px 16px;
-}
-
 .composer-panel {
+  align-items: flex-end;
   background: var(--surface-strong);
   border: 1px solid var(--border);
   border-radius: 28px;
   box-shadow: var(--shadow);
-  padding: 10px 68px 10px 12px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 8px 64px 8px 10px;
   position: relative;
 }
 
@@ -592,15 +579,21 @@ button {
   border: 0;
   color: var(--text-strong);
   display: block;
-  min-height: 46px;
+  max-height: 100%;
+  min-height: 44px;
+  min-width: 0;
   outline: none;
-  padding: 12px 0 0;
-  resize: vertical;
+  padding: 11px 0 9px;
+  resize: none;
   width: 100%;
 }
 
 .icon-action {
   cursor: pointer;
+}
+
+.composer-attach-action {
+  align-self: center;
 }
 
 .send-button {
@@ -637,12 +630,8 @@ button {
 
 @media (max-width: 1160px) {
   .app-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .header-badges {
-    justify-content: flex-start;
+    padding-left: 24px;
+    padding-right: 24px;
   }
 }
 
@@ -676,10 +665,6 @@ button {
     visibility: visible;
   }
 
-  .mobile-sidebar-button {
-    display: inline-flex;
-  }
-
   .sidebar-backdrop {
     background: rgba(15, 23, 42, 0.32);
     border: 0;
@@ -704,16 +689,13 @@ button {
   .conversation-inner {
     padding-bottom: 24px;
   }
+
+  .app-shell-sidebar-closed {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 720px) {
-  .app-header,
-  .app-footer,
-  .composer-info {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
   .app-header,
   .app-footer {
     padding-left: 18px;
@@ -734,26 +716,8 @@ button {
     padding-right: 18px;
   }
 
-  .header-subtitle {
-    font-size: 0.92rem;
-    line-height: 1.45;
-  }
-
-  .header-badges {
-    flex-wrap: nowrap;
-    max-width: 100%;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    width: 100%;
-  }
-
-  .header-signout,
-  .header-pill {
-    flex: 0 0 auto;
-  }
-
-  .conversation-note {
-    padding: 14px 16px;
+  .header-title-group {
+    gap: 10px;
   }
 
   .message-row,
@@ -773,30 +737,21 @@ button {
   }
 
   .message-bubble-user {
-    max-width: min(92%, 100%);
+    max-width: min(92%, calc(100vw - 36px));
   }
 
   .composer-shell {
     gap: 10px;
   }
 
-  .composer-info {
-    font-size: 0.78rem;
-    gap: 4px;
-  }
-
   .composer-panel {
     border-radius: 24px;
-    padding: 12px 12px 60px;
+    gap: 8px;
+    padding: 8px 56px 8px 8px;
   }
 
   .composer-panel textarea {
-    min-height: 82px;
-    padding-top: 10px;
-  }
-
-  .composer-left-actions {
-    gap: 8px;
+    min-height: 42px;
   }
 
   .icon-action {
@@ -851,6 +806,7 @@ button {
 
   .message-bubble,
   .thinking-bubble {
+    max-width: calc(100% - 40px);
     padding: 13px 14px;
   }
 
@@ -860,6 +816,17 @@ button {
 
   .composer-attachments {
     gap: 8px;
+  }
+
+  .attachment-pill {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .attachment-pill span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
@@ -876,11 +843,18 @@ button {
     width: min(92vw, 360px);
   }
 
-  .header-subtitle {
-    font-size: 0.88rem;
+  .message-bubble-user {
+    max-width: calc(100vw - 28px);
   }
+}
 
-  .conversation-note p:last-child {
-    font-size: 0.9rem;
+@media (min-width: 941px) {
+  .app-shell-sidebar-closed .sidebar {
+    border-right-color: transparent;
+    opacity: 0;
+    overflow: hidden;
+    padding-left: 0;
+    padding-right: 0;
+    pointer-events: none;
   }
 }
