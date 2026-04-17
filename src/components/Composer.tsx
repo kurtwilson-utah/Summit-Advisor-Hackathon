@@ -24,6 +24,7 @@ export function Composer({
   onSend
 }: ComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -73,11 +74,25 @@ export function Composer({
       ) : null}
 
       <div className="composer-panel">
-        <label className="secondary-button icon-action composer-attach-action">
-          <Paperclip size={16} />
-          <span>Attach</span>
-          <input hidden multiple onChange={(event) => onAddFiles(event.target.files)} type="file" />
-        </label>
+        <button
+          aria-label="Attach files"
+          className="secondary-button icon-action composer-attach-action"
+          onClick={() => fileInputRef.current?.click()}
+          title="Attach files"
+          type="button"
+        >
+          <Paperclip size={18} />
+        </button>
+        <input
+          ref={fileInputRef}
+          hidden
+          multiple
+          onChange={(event) => {
+            onAddFiles(event.target.files);
+            event.target.value = "";
+          }}
+          type="file"
+        />
 
         <textarea
           ref={textareaRef}

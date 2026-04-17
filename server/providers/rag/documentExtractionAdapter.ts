@@ -1,7 +1,3 @@
-import mammoth from "mammoth";
-import { PDFParse } from "pdf-parse";
-import * as XLSX from "xlsx";
-
 export interface ExtractionResult {
   text: string;
   metadata: {
@@ -24,13 +20,12 @@ export function createDocumentExtractionAdapter(): DocumentExtractionAdapter {
       const extension = getExtension(fileName);
 
       if (extension === "docx") {
-        const result = await mammoth.extractRawText({ buffer });
-        const text = normalizeText(result.value);
-        const warnings = [...result.messages.map((message) => message.message)];
+        const result = await extractDocxText(buffer);
+        const text = normalizeText(result.text);
 
         return {
           text,
-          metadata: buildExtractionMetadata({ storagePath, text, warnings })
+          metadata: buildExtractionMetadata({ storagePath, text, warnings: result.warnings })
         };
       }
 
@@ -44,15 +39,7 @@ export function createDocumentExtractionAdapter(): DocumentExtractionAdapter {
       }
 
       if (extension === "xlsx" || extension === "xls") {
-        const workbook = XLSX.read(buffer, { type: "buffer" });
-        const text = normalizeText(
-          workbook.SheetNames.map((sheetName) => {
-            const sheet = workbook.Sheets[sheetName];
-            const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false }).trim();
-
-            return csv ? `Sheet: ${sheetName}\n${csv}` : `Sheet: ${sheetName}`;
-          }).join("\n\n")
-        );
+        const text = normalizeText(await extractSpreadsheetText(buffer));
 
         return {
           text,
@@ -61,10 +48,7 @@ export function createDocumentExtractionAdapter(): DocumentExtractionAdapter {
       }
 
       if (extension === "pdf") {
-        const parser = new PDFParse({ data: buffer });
-        const result = await parser.getText();
-        const text = normalizeText(result.text);
-        await parser.destroy();
+        const text = normalizeText(await extractPdfText(buffer));
 
         return {
           text,
@@ -122,4 +106,38 @@ function normalizeText(value: string): string {
 function getExtension(fileName: string): string {
   const segments = fileName.toLowerCase().split(".");
   return segments[segments.length - 1] ?? "";
+}
+
+async function extractDocxText(buffer: Buffer) {
+  const mammoth = await import("mammoth");
+  const result = await mammoth.default.extractRawText({ buffer });
+
+  return {
+    text: result.value,
+    warnings: result.messages.map((message) => message.message)
+  };
+}
+
+async function extractSpreadsheetText(buffer: Buffer) {
+  const xlsx = await import("xlsx");
+  const workbook = xlsx.read(buffer, { type: "buffer" });
+
+  return workbook.SheetNames.map((sheetName) => {
+    const sheet = workbook.Sheets[sheetName];
+    const csv = xlsx.utils.sheet_to_csv(sheet, { blankrows: false }).trim();
+
+    return csv ? `Sheet: ${sheetName}\n${csv}` : `Sheet: ${sheetName}`;
+  }).join("\n\n");
+}
+
+async function extractPdfText(buffer: Buffer) {
+  const { PDFParse } = await import("pdf-parse");
+  const parser = new PDFParse({ data: buffer });
+
+  try {
+    const result = await parser.getText();
+    return result.text;
+  } finally {
+    await parser.destroy();
+  }
 }

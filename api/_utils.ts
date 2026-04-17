@@ -18,24 +18,34 @@ type NoPayloadHandler = () => Promise<JsonResponse> | JsonResponse;
 
 export function createGetRoute(handler: NoPayloadHandler) {
   return async function route(request: ApiRequest, response: ApiResponse) {
-    if (request.method && request.method !== "GET") {
-      writeMethodNotAllowed(response, "GET");
-      return;
-    }
+    await respond(
+      response,
+      (async () => {
+        if (request.method && request.method !== "GET") {
+          response.setHeader("Allow", "GET");
+          return methodNotAllowedResponse("GET");
+        }
 
-    await respond(response, handler());
+        return handler();
+      })()
+    );
   };
 }
 
 export function createPostRoute(handler: JsonHandler) {
   return async function route(request: ApiRequest, response: ApiResponse) {
-    if (request.method && request.method !== "POST") {
-      writeMethodNotAllowed(response, "POST");
-      return;
-    }
+    await respond(
+      response,
+      (async () => {
+        if (request.method && request.method !== "POST") {
+          response.setHeader("Allow", "POST");
+          return methodNotAllowedResponse("POST");
+        }
 
-    const payload = await readRequestPayload(request);
-    await respond(response, handler(payload));
+        const payload = await readRequestPayload(request);
+        return handler(payload);
+      })()
+    );
   };
 }
 
@@ -81,10 +91,12 @@ async function respond(response: ApiResponse, result: Promise<JsonResponse> | Js
   }
 }
 
-function writeMethodNotAllowed(response: ApiResponse, allowedMethod: string) {
-  response.setHeader("Allow", allowedMethod);
-  response.status(405).json({
-    ok: false,
-    message: `Method not allowed. Use ${allowedMethod}.`
-  });
+function methodNotAllowedResponse(allowedMethod: string): JsonResponse {
+  return {
+    status: 405,
+    body: {
+      ok: false,
+      message: `Method not allowed. Use ${allowedMethod}.`
+    }
+  };
 }

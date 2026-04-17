@@ -1,7 +1,6 @@
 import type { ChatTurnResponse } from "../../shared/chat.js";
 import type { ChatThread, EmailAccessSession } from "../../shared/thread.js";
 import { z } from "zod";
-import { createAppServices } from "../composition/createAppServices.js";
 
 const attachmentSchema = z.object({
   id: z.string(),
@@ -112,8 +111,6 @@ const syncThreadsSchema = z.object({
   threads: z.array(threadSchema)
 });
 
-const appServices = createAppServices();
-
 export interface JsonResponse {
   status: number;
   body: unknown;
@@ -139,6 +136,7 @@ export function getHealthResponse(): JsonResponse {
 
 export async function handleEmailAccess(rawPayload: unknown): Promise<JsonResponse> {
   const payload = accessRequestSchema.parse(parseJsonPayload(rawPayload));
+  const appServices = await getAppServices();
   const accessResult = await appServices.emailAccessService.requestAccess(payload.email);
 
   if (!accessResult) {
@@ -162,6 +160,7 @@ export async function handleEmailAccess(rawPayload: unknown): Promise<JsonRespon
 
 export async function handleChatSend(rawPayload: unknown): Promise<JsonResponse> {
   const payload = chatRequestSchema.parse(parseJsonPayload(rawPayload));
+  const appServices = await getAppServices();
   const result = await appServices.orchestrationService.executeTurn({
     threadId: payload.threadId,
     threadTitle: payload.threadTitle,
@@ -189,6 +188,7 @@ export async function handleChatSend(rawPayload: unknown): Promise<JsonResponse>
 
 export async function handleThreadsList(rawPayload: unknown): Promise<JsonResponse> {
   const payload = listThreadsSchema.parse(parseJsonPayload(rawPayload));
+  const appServices = await getAppServices();
 
   if (!appServices.emailAccessService.verifySession(payload.session)) {
     return invalidSessionResponse();
@@ -207,6 +207,7 @@ export async function handleThreadsList(rawPayload: unknown): Promise<JsonRespon
 
 export async function handleThreadsSync(rawPayload: unknown): Promise<JsonResponse> {
   const payload = syncThreadsSchema.parse(parseJsonPayload(rawPayload));
+  const appServices = await getAppServices();
 
   if (!appServices.emailAccessService.verifySession(payload.session)) {
     return invalidSessionResponse();
@@ -229,6 +230,7 @@ export async function handleThreadsSync(rawPayload: unknown): Promise<JsonRespon
 
 export async function handleConversationFinalize(rawPayload: unknown): Promise<JsonResponse> {
   const payload = finalizeSchema.parse(parseJsonPayload(rawPayload));
+  const appServices = await getAppServices();
 
   if (payload.session && !appServices.emailAccessService.verifySession(payload.session)) {
     return invalidSessionResponse();
@@ -257,4 +259,22 @@ function invalidSessionResponse(): JsonResponse {
       message: "Session is not valid."
     }
   };
+}
+
+type AppServices = Awaited<ReturnType<typeof loadAppServices>>;
+
+let cachedAppServices: AppServices | null = null;
+
+async function getAppServices() {
+  if (cachedAppServices) {
+    return cachedAppServices;
+  }
+
+  cachedAppServices = await loadAppServices();
+  return cachedAppServices;
+}
+
+async function loadAppServices() {
+  const { createAppServices } = await import("../composition/createAppServices.js");
+  return createAppServices();
 }

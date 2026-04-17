@@ -46,7 +46,7 @@ async function parseJsonResponse<TPayload>(response: Response) {
   try {
     return JSON.parse(rawBody) as TPayload;
   } catch {
-    throw new Error(`API response from ${response.url} was not valid JSON.`);
+    throw new Error(buildNonJsonResponseMessage(response, rawBody));
   }
 }
 
@@ -71,4 +71,20 @@ function buildNetworkErrorMessage(url: string, error: unknown) {
   }
 
   return `Cannot reach the API at ${appConfig.apiBaseUrl}.`;
+}
+
+function buildNonJsonResponseMessage(response: Response, rawBody: string) {
+  const normalizedBody = rawBody.replace(/\s+/g, " ").trim();
+  const bodySnippet = normalizedBody.slice(0, 180);
+
+  if (bodySnippet.includes("FUNCTION_INVOCATION_FAILED")) {
+    return [
+      `The deployed API at ${response.url} crashed before it could return JSON.`,
+      "Vercel reported FUNCTION_INVOCATION_FAILED.",
+      "Check the function logs and verify the latest deployment finished successfully."
+    ].join(" ");
+  }
+
+  const detail = bodySnippet ? ` Raw response: ${bodySnippet}` : "";
+  return `API response from ${response.url} was not valid JSON.${detail}`;
 }

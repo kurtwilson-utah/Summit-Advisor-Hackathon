@@ -594,6 +594,11 @@ button {
 
 .composer-attach-action {
   align-self: center;
+  display: inline-flex;
+  height: 42px;
+  justify-content: center;
+  padding: 0;
+  width: 42px;
 }
 
 .send-button {
@@ -756,10 +761,6 @@ button {
 
   .icon-action {
     padding: 8px 10px;
-  }
-
-  .icon-action span {
-    display: none;
   }
 
   .send-button {
