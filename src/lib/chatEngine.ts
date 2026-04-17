@@ -1,0 +1,176 @@
+import type {
+  AgentKey,
+  ChatMessage,
+  ChatThread,
+  DraftAttachment,
+  ThreadAgentState
+} from "./types";
+
+const AGENT_LABELS: Record<AgentKey, string> = {
+  "summit-product-manager": "Summit Product Manager",
+  "summit-knowledge-agent": "Summit Knowledge Agent",
+  "third-party-research-agent": "Third-Party Research Agent"
+};
+
+export function describeAttachmentKind(file: File): DraftAttachment["kind"] {
+  if (file.type.startsWith("image/")) {
+    return "image";
+  }
+
+  if (file.type.includes("pdf")) {
+    return "pdf";
+  }
+
+  if (file.type.includes("word") || file.name.endsWith(".docx")) {
+    return "word";
+  }
+
+  if (file.type.includes("sheet") || file.name.endsWith(".xlsx") || file.name.endsWith(".csv")) {
+    return "excel";
+  }
+
+  if (file.type.startsWith("video/")) {
+    return "video";
+  }
+
+  return "other";
+}
+
+export function formatBytes(size: number): string {
+  if (size === 0) {
+    return "0 B";
+  }
+
+  const units = ["B", "KB", "MB", "GB"];
+  const exponent = Math.min(Math.floor(Math.log(size) / Math.log(1024)), units.length - 1);
+  const value = size / 1024 ** exponent;
+
+  return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+}
+
+export function createAttachmentDraft(file: File): DraftAttachment {
+  return {
+    id: crypto.randomUUID(),
+    name: file.name,
+    mimeType: file.type || "application/octet-stream",
+    sizeLabel: formatBytes(file.size),
+    kind: describeAttachmentKind(file)
+  };
+}
+
+export function formatTimestamp(dateIso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(new Date(dateIso));
+}
+
+export function formatHistoryTimestamp(dateIso: string): string {
+  const targetDate = new Date(dateIso);
+  const deltaMs = targetDate.getTime() - Date.now();
+  const absoluteDeltaMs = Math.abs(deltaMs);
+  const minuteMs = 60_000;
+  const hourMs = 60 * minuteMs;
+  const dayMs = 24 * hourMs;
+
+  // Recent chats feel better with relative time, but older ones should stabilize to a date.
+  if (absoluteDeltaMs < 7 * dayMs) {
+    const formatter = new Intl.RelativeTimeFormat("en-US", { numeric: "auto" });
+
+    if (absoluteDeltaMs < hourMs) {
+      return formatter.format(Math.round(deltaMs / minuteMs), "minute");
+    }
+
+    if (absoluteDeltaMs < dayMs) {
+      return formatter.format(Math.round(deltaMs / hourMs), "hour");
+    }
+
+    return formatter.format(Math.round(deltaMs / dayMs), "day");
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: targetDate.getFullYear() === new Date().getFullYear() ? undefined : "numeric"
+  }).format(targetDate);
+}
+
+export function getAgentLabel(agentKey: AgentKey): string {
+  return AGENT_LABELS[agentKey];
+}
+
+export function createIdleAgentStates(): ThreadAgentState[] {
+  return [
+    {
+      key: "summit-product-manager",
+      label: AGENT_LABELS["summit-product-manager"],
+      status: "ready",
+      detail: "Awaiting the next user request."
+    },
+    {
+      key: "summit-knowledge-agent",
+      label: AGENT_LABELS["summit-knowledge-agent"],
+      status: "idle",
+      detail: "No active turn."
+    },
+    {
+      key: "third-party-research-agent",
+      label: AGENT_LABELS["third-party-research-agent"],
+      status: "idle",
+      detail: "No active turn."
+    }
+  ];
+}
+
+export function createEmptyThread(): ChatThread {
+  const now = new Date().toISOString();
+
+  return {
+    id: crypto.randomUUID(),
+    title: "New conversation",
+    statusLabel: "Draft",
+    updatedAt: now,
+    summary: "Fresh thread waiting for the first message.",
+    memoryDigest: "No hidden summary yet.",
+    notionStatus: "Not exported",
+    agentStates: createIdleAgentStates(),
+    messages: [
+      {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        authorLabel: "Cyncly Advisor",
+        bodyDisplay:
+          "This is a fresh thread. Ask a question, attach an artifact, or hand me a draft workflow to refine.",
+        createdAt: now,
+        agentKey: "summit-product-manager"
+      }
+    ]
+  };
+}
+
+export function summarizeThread(messages: ChatMessage[]): string {
+  const visibleMessages = messages.filter((message) => message.role !== "system");
+  const lastMessages = visibleMessages.slice(-4);
+
+  if (!lastMessages.length) {
+    return "New thread. No compressed memory yet.";
+  }
+
+  return lastMessages
+    .map((message) => `${message.authorLabel}: ${message.bodyDisplay.slice(0, 110)}`)
+    .join(" | ");
+}
+
+export function deriveThreadTitle(currentTitle: string, newestUserText: string): string {
+  if (currentTitle !== "New conversation") {
+    return currentTitle;
+  }
+
+  const trimmed = newestUserText.trim();
+
+  if (!trimmed) {
+    return currentTitle;
+  }
+
+  return `${trimmed.slice(0, 42)}${trimmed.length > 42 ? "..." : ""}`;
+}

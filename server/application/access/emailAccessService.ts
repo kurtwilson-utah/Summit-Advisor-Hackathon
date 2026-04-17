@@ -1,0 +1,55 @@
+import type { EmailAllowlistAdapter } from "../../providers/access/envAllowlistAdapter";
+import type { SignedAccessSession } from "../../lib/accessSessionSigner";
+
+export interface EmailAccessResult extends SignedAccessSession {}
+
+export interface EmailAccessService {
+  requestAccess(email: string): Promise<EmailAccessResult | null>;
+  verifySession(session: SignedAccessSession): boolean;
+}
+
+export function createEmailAccessService(dependencies: {
+  allowlistAdapter: EmailAllowlistAdapter;
+  sessionSigner: {
+    sign(args: { email: string; displayName: string }): SignedAccessSession;
+    verify(session: SignedAccessSession): boolean;
+  };
+}): EmailAccessService {
+  return {
+    async requestAccess(email) {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      if (!isValidEmail(normalizedEmail)) {
+        return null;
+      }
+
+      const isAllowed = await dependencies.allowlistAdapter.isAllowed(normalizedEmail);
+
+      if (!isAllowed) {
+        return null;
+      }
+
+      return dependencies.sessionSigner.sign({
+        email: normalizedEmail,
+        displayName: createDisplayName(normalizedEmail)
+      });
+    },
+    verifySession(session) {
+      return dependencies.sessionSigner.verify(session);
+    }
+  };
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function createDisplayName(email: string): string {
+  const localPart = email.split("@")[0] ?? email;
+
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+    .join(" ");
+}
