@@ -1,7 +1,7 @@
 import cors from "cors";
 import express from "express";
-import { env } from "./lib/config";
-import { chatRouter } from "./routes/chat";
+import { env } from "./lib/config.js";
+import { chatRouter } from "./routes/chat.js";
 
 const app = express();
 

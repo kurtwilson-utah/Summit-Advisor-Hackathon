@@ -1,5 +1,5 @@
-import type { EmailAllowlistAdapter } from "../../providers/access/envAllowlistAdapter";
-import type { SignedAccessSession } from "../../lib/accessSessionSigner";
+import type { EmailAllowlistAdapter } from "../../providers/access/envAllowlistAdapter.js";
+import type { SignedAccessSession } from "../../lib/accessSessionSigner.js";
 
 export interface EmailAccessResult extends SignedAccessSession {}
 

@@ -1,4 +1,4 @@
-import { handleThreadsSync } from "../../server/http/chatApi";
-import { createPostRoute } from "../_utils";
+import { handleThreadsSync } from "../../server/http/chatApi.js";
+import { createPostRoute } from "../_utils.js";
 
 export default createPostRoute(handleThreadsSync);

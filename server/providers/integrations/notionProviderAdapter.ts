@@ -1,8 +1,8 @@
 import { Client } from "@notionhq/client";
 import type { BlockObjectRequest } from "@notionhq/client/build/src/api-endpoints";
-import type { ExtractedIdeaCandidate } from "../../application/finalization/ideaExtractionService";
-import { env } from "../../lib/config";
-import type { ConversationExportPayload } from "../persistence/supabasePersistenceAdapter";
+import type { ExtractedIdeaCandidate } from "../../application/finalization/ideaExtractionService.js";
+import { env } from "../../lib/config.js";
+import type { ConversationExportPayload } from "../persistence/supabasePersistenceAdapter.js";
 
 type NotionPropertyType =
   | "title"

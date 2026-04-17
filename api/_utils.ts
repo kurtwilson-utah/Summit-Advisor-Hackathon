@@ -1,5 +1,5 @@
 import { ZodError } from "zod";
-import type { JsonResponse } from "../server/http/chatApi";
+import type { JsonResponse } from "../server/http/chatApi.js";
 
 interface ApiRequest {
   body?: unknown;

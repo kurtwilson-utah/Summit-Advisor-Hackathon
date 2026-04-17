@@ -1,7 +1,7 @@
-import type { ChatThread, EmailAccessSession } from "../../../shared/thread";
-import type { IdeaExtractionService } from "./ideaExtractionService";
-import type { NotionProviderAdapter } from "../../providers/integrations/notionProviderAdapter";
-import type { ConversationPersistenceService } from "../persistence/conversationPersistenceService";
+import type { ChatThread, EmailAccessSession } from "../../../shared/thread.js";
+import type { IdeaExtractionService } from "./ideaExtractionService.js";
+import type { NotionProviderAdapter } from "../../providers/integrations/notionProviderAdapter.js";
+import type { ConversationPersistenceService } from "../persistence/conversationPersistenceService.js";
 
 export interface ConversationFinalizationService {
   finalizeConversation(args: {

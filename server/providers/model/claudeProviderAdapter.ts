@@ -1,8 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { readFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
-import type { AgentKey } from "../../../shared/chat";
-import { env } from "../../lib/config";
+import type { AgentKey } from "../../../shared/chat.js";
+import { env } from "../../lib/config.js";
 
 const promptPaths: Record<AgentKey, string> = {
   "summit-product-manager": env.AGENT_PRIMARY_PROMPT_PATH,

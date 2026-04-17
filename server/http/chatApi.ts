@@ -1,7 +1,7 @@
-import type { ChatTurnResponse } from "../../shared/chat";
-import type { ChatThread, EmailAccessSession } from "../../shared/thread";
+import type { ChatTurnResponse } from "../../shared/chat.js";
+import type { ChatThread, EmailAccessSession } from "../../shared/thread.js";
 import { z } from "zod";
-import { createAppServices } from "../composition/createAppServices";
+import { createAppServices } from "../composition/createAppServices.js";
 
 const attachmentSchema = z.object({
   id: z.string(),

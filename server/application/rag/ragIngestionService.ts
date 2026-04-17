@@ -1,8 +1,8 @@
-import type { DocumentExtractionAdapter } from "../../providers/rag/documentExtractionAdapter";
+import type { DocumentExtractionAdapter } from "../../providers/rag/documentExtractionAdapter.js";
 import type {
   RagSourceFile,
   SupabaseRagRepositoryAdapter
-} from "../../providers/rag/supabaseRagRepositoryAdapter";
+} from "../../providers/rag/supabaseRagRepositoryAdapter.js";
 
 export interface RagIngestionSummary {
   bucket: string;

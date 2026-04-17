@@ -1,4 +1,4 @@
-import { createSupabaseAdminClient } from "../../lib/supabaseAdmin";
+import { createSupabaseAdminClient } from "../../lib/supabaseAdmin.js";
 
 interface RagDocumentRow {
   id: string;
