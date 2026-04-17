@@ -101,32 +101,11 @@ function App() {
             </button>
 
             <div>
-              <p className="eyebrow">Cyncly Advisor</p>
               <h2>{activeThread.title}</h2>
-              <p className="header-subtitle">
-                The Summit Product Manager responds publicly and can delegate to {supportingAgentCount} supporting
-                agent{supportingAgentCount === 1 ? "" : "s"} behind the scenes.
-              </p>
             </div>
           </div>
 
           <div className="header-badges">
-            <span className="header-pill">
-              <Sparkles size={14} />
-              {defaultTheme.name}
-            </span>
-            <span className="header-pill">
-              <Lock size={14} />
-              PII protected
-            </span>
-            <span className="header-pill">
-              <Database size={14} />
-              Runtime ready
-            </span>
-            <span className="header-pill">
-              <Lock size={14} />
-              {session.email}
-            </span>
             <button className="secondary-button header-signout" onClick={signOut} type="button">
               <LogOut size={14} />
               Sign out
@@ -136,14 +115,6 @@ function App() {
 
         <section className="conversation-window">
           <div className="conversation-inner">
-            <section className="conversation-note">
-              <p className="eyebrow">Thread status</p>
-              <h3>{activeThread.statusLabel}</h3>
-              <p>
-                Context compression is active for this thread, and finalized conversations are prepared for downstream
-                Notion export.
-              </p>
-            </section>
 
             <section className="message-list">
               {activeThread.messages.map((message) => (
