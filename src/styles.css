@@ -1,6 +1,7 @@
 :root {
   --font-display: "Noto Sans", sans-serif;
   --font-body: "Noto Sans", sans-serif;
+  --app-height: 100dvh;
   --background-canvas: #ffffff;
   --surface: #ffffff;
   --surface-strong: #ffffff;
@@ -30,8 +31,8 @@ html,
 body,
 #root {
   margin: 0;
-  height: 100%;
-  min-height: 100%;
+  height: var(--app-height);
+  min-height: var(--app-height);
 }
 
 body {
@@ -40,6 +41,7 @@ body {
   font-family: var(--font-body);
   font-size: 14px;
   line-height: 1.5;
+  overflow: hidden;
 }
 
 input {
@@ -60,8 +62,8 @@ button {
 .app-shell {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
-  height: 100dvh;
-  min-height: 100dvh;
+  height: var(--app-height);
+  min-height: var(--app-height);
   overflow: hidden;
   transition: grid-template-columns 220ms ease;
 }
@@ -75,7 +77,7 @@ button {
   background: var(--background-canvas);
   display: flex;
   justify-content: center;
-  min-height: 100vh;
+  min-height: var(--app-height);
   padding: 24px;
 }
 
@@ -153,7 +155,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  min-height: 100vh;
+  min-height: var(--app-height);
   min-width: 0;
   padding: 24px 20px;
   transition: opacity 220ms ease, padding 220ms ease, border-color 220ms ease;
@@ -339,7 +341,7 @@ button {
 .workspace {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  min-height: 100dvh;
+  min-height: var(--app-height);
   min-width: 0;
 }
 
@@ -641,6 +643,11 @@ button {
 }
 
 @media (max-width: 940px) {
+  .email-gate-field input,
+  .composer-panel textarea {
+    font-size: 16px;
+  }
+
   .app-shell {
     display: block;
   }
@@ -650,10 +657,10 @@ button {
     border-right: 1px solid var(--divider);
     box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
     display: flex;
-    height: 100dvh;
+    height: var(--app-height);
     left: 0;
     max-width: min(86vw, 360px);
-    min-height: 100dvh;
+    min-height: var(--app-height);
     padding-bottom: calc(24px + env(safe-area-inset-bottom));
     padding-top: calc(24px + env(safe-area-inset-top));
     position: fixed;
@@ -688,7 +695,7 @@ button {
   }
 
   .workspace {
-    height: 100dvh;
+    height: var(--app-height);
   }
 
   .conversation-inner {

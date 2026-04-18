@@ -43,6 +43,30 @@ function App() {
   }
 
   useEffect(() => {
+    const root = document.documentElement;
+
+    const updateViewportMetrics = () => {
+      const viewport = window.visualViewport;
+      const viewportHeight = viewport ? Math.round(viewport.height + viewport.offsetTop) : window.innerHeight;
+      root.style.setProperty("--app-height", `${viewportHeight}px`);
+    };
+
+    updateViewportMetrics();
+
+    const viewport = window.visualViewport;
+    window.addEventListener("resize", updateViewportMetrics);
+    viewport?.addEventListener("resize", updateViewportMetrics);
+    viewport?.addEventListener("scroll", updateViewportMetrics);
+
+    return () => {
+      window.removeEventListener("resize", updateViewportMetrics);
+      viewport?.removeEventListener("resize", updateViewportMetrics);
+      viewport?.removeEventListener("scroll", updateViewportMetrics);
+      root.style.removeProperty("--app-height");
+    };
+  }, []);
+
+  useEffect(() => {
     const windowElement = conversationWindowRef.current;
 
     if (!windowElement) {
