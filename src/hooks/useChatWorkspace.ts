@@ -1,6 +1,6 @@
 import { appConfig } from "../config/appConfig";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createAttachmentDraft, createEmptyThread } from "../lib/chatEngine";
+import { createAttachmentDraft, createEmptyThread, sortThreadsByRecentActivity } from "../lib/chatEngine";
 import { applyTheme, defaultTheme } from "../lib/theme";
 import type { ActiveThinkingState, ChatThread, EmailAccessSession, PendingAttachmentDraft } from "../lib/types";
 import { createThreadFinalizationService } from "../services/finalization/threadFinalizationService";
@@ -59,8 +59,9 @@ export function useChatWorkspace(session: EmailAccessSession | null) {
     const stored = persistenceService.loadThreads(sessionEmail);
 
     if (stored && stored.length > 0) {
-      setThreads(stored);
-      setSelectedThreadId(stored[0].id);
+      const orderedThreads = sortThreadsByRecentActivity(stored);
+      setThreads(orderedThreads);
+      setSelectedThreadId(orderedThreads[0].id);
     } else {
       const emptyThread = createEmptyThread();
       setThreads([emptyThread]);
@@ -128,6 +129,16 @@ export function useChatWorkspace(session: EmailAccessSession | null) {
   );
 
   useEffect(() => {
+    if (threads.length === 0) {
+      return;
+    }
+
+    if (!threads.some((thread) => thread.id === selectedThreadId)) {
+      setSelectedThreadId(threads[0].id);
+    }
+  }, [selectedThreadId, threads]);
+
+  useEffect(() => {
     if (!session || appConfig.useMockBackend || !activeThread || activeThread.notionStatus !== "Finalize pending") {
       return;
     }
@@ -163,14 +174,14 @@ export function useChatWorkspace(session: EmailAccessSession | null) {
 
   function updateThread(threadId: string, updater: (thread: ChatThread) => ChatThread) {
     setThreads((currentThreads) =>
-      currentThreads.map((thread) => (thread.id === threadId ? updater(thread) : thread))
+      sortThreadsByRecentActivity(currentThreads.map((thread) => (thread.id === threadId ? updater(thread) : thread)))
     );
   }
 
   function handleNewThread() {
     const newThread = runtime.createThread();
 
-    setThreads((currentThreads) => [newThread, ...currentThreads]);
+    setThreads((currentThreads) => sortThreadsByRecentActivity([newThread, ...currentThreads]));
     setSelectedThreadId(newThread.id);
     setDraft("");
     setAttachments([]);
@@ -305,9 +316,7 @@ function mergeThreads(remoteThreads: ChatThread[], localThreads: ChatThread[]) {
     }
   }
 
-  return Array.from(mergedThreads.values()).sort(
-    (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
-  );
+  return sortThreadsByRecentActivity(Array.from(mergedThreads.values()));
 }
 
 function hasThreadAdvancedSinceFinalizationRequest(currentThread: ChatThread, finalizedThread: ChatThread) {

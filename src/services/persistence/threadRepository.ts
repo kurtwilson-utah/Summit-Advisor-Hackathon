@@ -1,4 +1,5 @@
 import type { ChatThread } from "../../lib/types";
+import { sortThreadsByRecentActivity } from "../../lib/chatEngine";
 
 export interface ThreadRepository {
   loadThreads(email: string): ChatThread[] | null;
@@ -31,7 +32,7 @@ export function createLocalThreadRepository(): ThreadRepository {
           return null;
         }
 
-        return parsed as ChatThread[];
+        return sortThreadsByRecentActivity(parsed as ChatThread[]);
       } catch {
         return null;
       }
@@ -41,7 +42,7 @@ export function createLocalThreadRepository(): ThreadRepository {
         return;
       }
 
-      window.localStorage.setItem(keyFor(email), JSON.stringify(threads));
+      window.localStorage.setItem(keyFor(email), JSON.stringify(sortThreadsByRecentActivity(threads)));
     },
     clearUnscopedLegacy() {
       if (typeof window === "undefined") {

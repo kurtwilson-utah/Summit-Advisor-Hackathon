@@ -162,6 +162,12 @@ export function createEmptyThread(): ChatThread {
   };
 }
 
+export function sortThreadsByRecentActivity(threads: ChatThread[]): ChatThread[] {
+  return [...threads].sort(
+    (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+  );
+}
+
 export function summarizeThread(messages: ChatMessage[]): string {
   const visibleMessages = messages.filter((message) => message.role !== "system");
   const lastMessages = visibleMessages.slice(-4);

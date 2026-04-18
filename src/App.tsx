@@ -97,6 +97,12 @@ function App() {
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
+      const conversationWindow = conversationWindowRef.current;
+
+      if (conversationWindow) {
+        conversationWindow.scrollTop = conversationWindow.scrollHeight;
+      }
+
       conversationEndRef.current?.scrollIntoView({
         block: "end"
       });
