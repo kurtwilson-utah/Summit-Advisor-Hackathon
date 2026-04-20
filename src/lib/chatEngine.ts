@@ -162,10 +162,43 @@ export function createEmptyThread(): ChatThread {
   };
 }
 
-export function sortThreadsByRecentActivity(threads: ChatThread[]): ChatThread[] {
-  return [...threads].sort(
-    (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+export function isUnsentDraftThread(thread: ChatThread): boolean {
+  const nonAssistantMessages = thread.messages.filter((message) => message.role !== "assistant");
+
+  return (
+    thread.title === "New conversation" &&
+    nonAssistantMessages.length === 0 &&
+    thread.messages.length === 1 &&
+    thread.messages[0]?.role === "assistant"
   );
+}
+
+export function getThreadActivityTimestamp(thread: ChatThread): string {
+  return thread.messages[thread.messages.length - 1]?.createdAt ?? thread.updatedAt;
+}
+
+export function normalizeThreadCollection(threads: ChatThread[]): ChatThread[] {
+  const sortedThreads = [...threads].sort(compareThreadsByRecency);
+  const normalizedThreads: ChatThread[] = [];
+  let keptDraft = false;
+
+  for (const thread of sortedThreads) {
+    if (isUnsentDraftThread(thread)) {
+      if (keptDraft) {
+        continue;
+      }
+
+      keptDraft = true;
+    }
+
+    normalizedThreads.push(thread);
+  }
+
+  return normalizedThreads;
+}
+
+export function sortThreadsByRecentActivity(threads: ChatThread[]): ChatThread[] {
+  return normalizeThreadCollection(threads);
 }
 
 export function summarizeThread(messages: ChatMessage[]): string {
@@ -193,4 +226,15 @@ export function deriveThreadTitle(currentTitle: string, newestUserText: string):
   }
 
   return `${trimmed.slice(0, 42)}${trimmed.length > 42 ? "..." : ""}`;
+}
+
+function compareThreadsByRecency(left: ChatThread, right: ChatThread): number {
+  const leftIsDraft = isUnsentDraftThread(left);
+  const rightIsDraft = isUnsentDraftThread(right);
+
+  if (leftIsDraft !== rightIsDraft) {
+    return leftIsDraft ? -1 : 1;
+  }
+
+  return new Date(getThreadActivityTimestamp(right)).getTime() - new Date(getThreadActivityTimestamp(left)).getTime();
 }

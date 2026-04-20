@@ -1,6 +1,12 @@
 import { appConfig } from "../config/appConfig";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createAttachmentDraft, createEmptyThread, sortThreadsByRecentActivity } from "../lib/chatEngine";
+import {
+  createAttachmentDraft,
+  createEmptyThread,
+  getThreadActivityTimestamp,
+  isUnsentDraftThread,
+  normalizeThreadCollection
+} from "../lib/chatEngine";
 import { applyTheme, defaultTheme } from "../lib/theme";
 import type { ActiveThinkingState, ChatThread, EmailAccessSession, PendingAttachmentDraft } from "../lib/types";
 import { createThreadFinalizationService } from "../services/finalization/threadFinalizationService";
@@ -23,7 +29,7 @@ function loadInitialThreadsForSession(session: EmailAccessSession | null): ChatT
     const stored = persistenceService.loadThreads(session.email);
 
     if (stored && stored.length > 0) {
-      return stored;
+      return normalizeThreadCollection(stored);
     }
   }
 
@@ -59,7 +65,7 @@ export function useChatWorkspace(session: EmailAccessSession | null) {
     const stored = persistenceService.loadThreads(sessionEmail);
 
     if (stored && stored.length > 0) {
-      const orderedThreads = sortThreadsByRecentActivity(stored);
+      const orderedThreads = normalizeThreadCollection(stored);
       setThreads(orderedThreads);
       setSelectedThreadId(orderedThreads[0].id);
     } else {
@@ -174,15 +180,30 @@ export function useChatWorkspace(session: EmailAccessSession | null) {
 
   function updateThread(threadId: string, updater: (thread: ChatThread) => ChatThread) {
     setThreads((currentThreads) =>
-      sortThreadsByRecentActivity(currentThreads.map((thread) => (thread.id === threadId ? updater(thread) : thread)))
+      normalizeThreadCollection(currentThreads.map((thread) => (thread.id === threadId ? updater(thread) : thread)))
     );
   }
 
   function handleNewThread() {
-    const newThread = runtime.createThread();
+    let selectedDraftId = "";
 
-    setThreads((currentThreads) => sortThreadsByRecentActivity([newThread, ...currentThreads]));
-    setSelectedThreadId(newThread.id);
+    setThreads((currentThreads) => {
+      const existingDraft = currentThreads.find(isUnsentDraftThread);
+
+      if (existingDraft) {
+        selectedDraftId = existingDraft.id;
+        return normalizeThreadCollection(currentThreads);
+      }
+
+      const newThread = runtime.createThread();
+      selectedDraftId = newThread.id;
+      return normalizeThreadCollection([newThread, ...currentThreads]);
+    });
+
+    if (selectedDraftId) {
+      setSelectedThreadId(selectedDraftId);
+    }
+
     setDraft("");
     setAttachments([]);
     setActiveThinkingState(null);
@@ -311,12 +332,12 @@ function mergeThreads(remoteThreads: ChatThread[], localThreads: ChatThread[]) {
   for (const thread of [...localThreads, ...remoteThreads]) {
     const existing = mergedThreads.get(thread.id);
 
-    if (!existing || new Date(thread.updatedAt).getTime() >= new Date(existing.updatedAt).getTime()) {
+    if (!existing || shouldReplaceThread(existing, thread)) {
       mergedThreads.set(thread.id, thread);
     }
   }
 
-  return sortThreadsByRecentActivity(Array.from(mergedThreads.values()));
+  return normalizeThreadCollection(Array.from(mergedThreads.values()));
 }
 
 function hasThreadAdvancedSinceFinalizationRequest(currentThread: ChatThread, finalizedThread: ChatThread) {
@@ -324,4 +345,19 @@ function hasThreadAdvancedSinceFinalizationRequest(currentThread: ChatThread, fi
     currentThread.updatedAt !== finalizedThread.updatedAt ||
     currentThread.messages.length !== finalizedThread.messages.length
   );
+}
+
+function shouldReplaceThread(currentThread: ChatThread, nextThread: ChatThread) {
+  const currentActivity = new Date(getThreadActivityTimestamp(currentThread)).getTime();
+  const nextActivity = new Date(getThreadActivityTimestamp(nextThread)).getTime();
+
+  if (nextActivity !== currentActivity) {
+    return nextActivity > currentActivity;
+  }
+
+  if (nextThread.messages.length !== currentThread.messages.length) {
+    return nextThread.messages.length > currentThread.messages.length;
+  }
+
+  return new Date(nextThread.updatedAt).getTime() >= new Date(currentThread.updatedAt).getTime();
 }

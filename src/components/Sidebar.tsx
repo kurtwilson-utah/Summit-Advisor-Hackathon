@@ -1,5 +1,5 @@
 import { LogOut, MessageSquareText, Plus } from "lucide-react";
-import { formatHistoryTimestamp } from "../lib/chatEngine";
+import { formatHistoryTimestamp, getThreadActivityTimestamp } from "../lib/chatEngine";
 import type { ChatThread } from "../lib/types";
 
 interface SidebarProps {
@@ -58,7 +58,7 @@ export function Sidebar({
 
                 <div className="thread-card-footer">
                   <span>{thread.statusLabel}</span>
-                  <span>{formatHistoryTimestamp(thread.updatedAt)}</span>
+                  <span>{formatHistoryTimestamp(getThreadActivityTimestamp(thread))}</span>
                 </div>
               </button>
             );

@@ -11,6 +11,7 @@ interface AdvisorThreadRow {
   access_name: string;
   title: string;
   status_label: string;
+  last_message_at: string;
   updated_at: string;
   summary: string;
   memory_digest: string;
@@ -101,9 +102,11 @@ export function createSupabasePersistenceAdapter(): ConversationPersistenceAdapt
       const normalizedEmail = normalizeEmail(email);
       const threadResult = await client
         .from(THREAD_TABLE)
-        .select("id, access_email, access_name, title, status_label, updated_at, summary, memory_digest, notion_status, agent_states")
+        .select(
+          "id, access_email, access_name, title, status_label, last_message_at, updated_at, summary, memory_digest, notion_status, agent_states"
+        )
         .eq("access_email", normalizedEmail)
-        .order("updated_at", { ascending: false });
+        .order("last_message_at", { ascending: false });
 
       if (threadResult.error) {
         throw threadResult.error;
@@ -150,7 +153,7 @@ export function createSupabasePersistenceAdapter(): ConversationPersistenceAdapt
         id: thread.id,
         title: thread.title,
         statusLabel: thread.status_label,
-        updatedAt: thread.updated_at,
+        updatedAt: thread.last_message_at,
         summary: thread.summary,
         memoryDigest: thread.memory_digest,
         notionStatus: thread.notion_status,
@@ -167,7 +170,6 @@ export function createSupabasePersistenceAdapter(): ConversationPersistenceAdapt
           access_name: session.displayName,
           title: thread.title,
           status_label: thread.statusLabel,
-          updated_at: thread.updatedAt,
           summary: thread.summary,
           memory_digest: thread.memoryDigest,
           notion_status: thread.notionStatus,
@@ -233,8 +235,7 @@ export function createSupabasePersistenceAdapter(): ConversationPersistenceAdapt
           .from(THREAD_TABLE)
           .update({
             notion_status: "Finalize pending",
-            conversation_closed_at: now,
-            updated_at: now
+            conversation_closed_at: now
           })
           .eq("id", threadId)
       ]);
@@ -251,7 +252,9 @@ export function createSupabasePersistenceAdapter(): ConversationPersistenceAdapt
       const [threadResult, messageResult, exportResult] = await Promise.all([
         client
           .from(THREAD_TABLE)
-          .select("id, access_email, access_name, title, status_label, updated_at, summary, memory_digest, notion_status, agent_states")
+          .select(
+            "id, access_email, access_name, title, status_label, last_message_at, updated_at, summary, memory_digest, notion_status, agent_states"
+          )
           .eq("id", threadId)
           .maybeSingle(),
         client
@@ -305,7 +308,7 @@ export function createSupabasePersistenceAdapter(): ConversationPersistenceAdapt
           id: threadRow.id,
           title: threadRow.title,
           statusLabel: threadRow.status_label,
-          updatedAt: threadRow.updated_at,
+          updatedAt: threadRow.last_message_at,
           summary: threadRow.summary,
           memoryDigest: threadRow.memory_digest,
           notionStatus: threadRow.notion_status,
