@@ -12,7 +12,7 @@ import type { TurnOrchestrationService } from "../orchestration/turnOrchestratio
 import type { ConversationProviderAdapter } from "../providers/conversationProvider";
 
 export interface ChatWorkspaceRuntime {
-  createThread(): ChatThread;
+  createThread(displayName?: string | null): ChatThread;
   submitTurn(args: {
     thread: ChatThread;
     draft: string;
@@ -30,8 +30,8 @@ export function createChatWorkspaceRuntime(dependencies: {
   providerAdapter: ConversationProviderAdapter;
 }): ChatWorkspaceRuntime {
   return {
-    createThread() {
-      return createEmptyThread();
+    createThread(displayName) {
+      return createEmptyThread(displayName);
     },
     async submitTurn({ thread, draft, attachments, contextItems, onOptimisticUpdate, onThinkingStep, onComplete }) {
       const trimmedDraft = draft.trim();

@@ -39,7 +39,7 @@ function loadInitialThreadsForSession(session: EmailAccessSession | null): ChatT
     }
   }
 
-  return [createEmptyThread()];
+  return [createEmptyThread(session?.displayName)];
 }
 
 function createHostContextItems(pageTitle: string | null) {
@@ -103,11 +103,11 @@ export function useChatWorkspace(
       setThreads(orderedThreads);
       setSelectedThreadId(orderedThreads[0].id);
     } else {
-      const emptyThread = createEmptyThread();
+      const emptyThread = createEmptyThread(session?.displayName);
       setThreads([emptyThread]);
       setSelectedThreadId(emptyThread.id);
     }
-  }, [sessionEmail]);
+  }, [session, sessionEmail]);
 
   useEffect(() => {
     if (!options?.isEmbeddedMode) {
@@ -323,7 +323,7 @@ export function useChatWorkspace(
         return normalizeThreadCollection(currentThreads);
       }
 
-      const newThread = runtime.createThread();
+      const newThread = runtime.createThread(session?.displayName);
       selectedDraftId = newThread.id;
       return normalizeThreadCollection([newThread, ...currentThreads]);
     });

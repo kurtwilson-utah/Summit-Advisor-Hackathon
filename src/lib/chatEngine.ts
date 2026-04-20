@@ -136,8 +136,10 @@ export function createIdleAgentStates(): ThreadAgentState[] {
   ];
 }
 
-export function createEmptyThread(): ChatThread {
+export function createEmptyThread(displayName?: string | null): ChatThread {
   const now = new Date().toISOString();
+  const greetingName = deriveGreetingName(displayName);
+  const greetingPrefix = greetingName ? `Hi, ${greetingName}!` : "Hi!";
 
   return {
     id: crypto.randomUUID(),
@@ -153,8 +155,7 @@ export function createEmptyThread(): ChatThread {
         id: crypto.randomUUID(),
         role: "assistant",
         authorLabel: "Cyncly Advisor",
-        bodyDisplay:
-          "This is a fresh thread. Ask a question, attach an artifact, or hand me a draft workflow to refine.",
+        bodyDisplay: `${greetingPrefix} I can help answer questions about Summit, and can submit ideas on your behalf. What can I help you with today?`,
         createdAt: now,
         agentKey: "summit-product-manager"
       }
@@ -237,4 +238,14 @@ function compareThreadsByRecency(left: ChatThread, right: ChatThread): number {
   }
 
   return new Date(getThreadActivityTimestamp(right)).getTime() - new Date(getThreadActivityTimestamp(left)).getTime();
+}
+
+function deriveGreetingName(displayName?: string | null): string | null {
+  const trimmed = displayName?.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed.split(/\s+/)[0] ?? null;
 }

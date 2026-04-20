@@ -4,11 +4,12 @@
   }
 
   const HOST_STORAGE_KEY = "persist:summit-shell-root";
-  const POSITION_STORAGE_KEY = "cyncly-advisor/widget-position/v1";
+  const POSITION_STORAGE_KEY = "cyncly-advisor/widget-position/v2";
   const FRAME_SOURCE = "cyncly-advisor-widget";
   const CHILD_SOURCE = "cyncly-advisor-iframe";
   const launcherSize = 56;
   const gutter = 16;
+  const panelGap = 12;
   const script = document.currentScript;
   const scriptUrl = script ? new URL(script.src, window.location.href) : new URL(window.location.href);
   const widgetOrigin = scriptUrl.origin;
@@ -23,6 +24,7 @@
     pointerId: null,
     dragOffsetX: 0,
     dragOffsetY: 0,
+    locationSignature: getLocationSignature(),
     position: loadPosition()
   };
 
@@ -97,12 +99,19 @@
       destroy: () => {
         window.removeEventListener("message", handleMessage);
         window.removeEventListener("resize", handleWindowResize);
+        window.removeEventListener("popstate", handleLocationChange);
+        window.removeEventListener("hashchange", handleLocationChange);
         document.removeEventListener("keydown", handleKeyDown);
+        window.history.pushState = originalPushState;
+        window.history.replaceState = originalReplaceState;
         titleObserver.disconnect();
         root.remove();
         delete window.CynclyAdvisorWidget;
       }
     };
+
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
 
     function ensureFrameLoaded() {
       if (state.iframeLoaded) {
@@ -135,7 +144,7 @@
       return {
         name: authState && authState.user ? authState.user.name || "" : "",
         email: authState && authState.user ? authState.user.email || "" : "",
-        pageTitle: document.title || ""
+        pageTitle: deriveRouteContextValue()
       };
     }
 
@@ -186,13 +195,13 @@
 
       const panelWidth = Math.min(392, viewportWidth - gutter * 2);
       const panelHeight = Math.min(720, viewportHeight - gutter * 2);
-      const preferredLeft = state.position.x + launcherSize - panelWidth;
-      const preferredTop = state.position.y - panelHeight - 12;
+      const shouldOpenToRight = state.position.x + launcherSize / 2 <= viewportWidth / 2;
+      const preferredLeft = shouldOpenToRight
+        ? state.position.x + launcherSize + panelGap
+        : state.position.x - panelWidth - panelGap;
+      const preferredTop = state.position.y + launcherSize - panelHeight;
       const panelLeft = clamp(preferredLeft, gutter, viewportWidth - panelWidth - gutter);
-      const panelTop =
-        preferredTop >= gutter
-          ? preferredTop
-          : clamp(state.position.y + launcherSize + 12, gutter, viewportHeight - panelHeight - gutter);
+      const panelTop = clamp(preferredTop, gutter, viewportHeight - panelHeight - gutter);
 
       panel.style.height = panelHeight + "px";
       panel.style.left = panelLeft + "px";
@@ -277,6 +286,17 @@
 
     function handleWindowResize() {
       updateLayout();
+      handleLocationChange();
+    }
+
+    function handleLocationChange() {
+      const nextLocationSignature = getLocationSignature();
+
+      if (nextLocationSignature === state.locationSignature) {
+        return;
+      }
+
+      state.locationSignature = nextLocationSignature;
       syncBootstrap();
     }
 
@@ -292,7 +312,19 @@
     launcher.addEventListener("pointercancel", handleLauncherPointerUp);
     window.addEventListener("message", handleMessage);
     window.addEventListener("resize", handleWindowResize);
+    window.addEventListener("popstate", handleLocationChange);
+    window.addEventListener("hashchange", handleLocationChange);
     document.addEventListener("keydown", handleKeyDown);
+    window.history.pushState = function pushState() {
+      const result = originalPushState.apply(this, arguments);
+      handleLocationChange();
+      return result;
+    };
+    window.history.replaceState = function replaceState() {
+      const result = originalReplaceState.apply(this, arguments);
+      handleLocationChange();
+      return result;
+    };
 
     const titleObserver = new MutationObserver(() => {
       syncBootstrap();
@@ -326,9 +358,29 @@
 
   function defaultPosition() {
     return {
-      x: Math.max(gutter, Math.round((window.innerWidth - launcherSize) / 2)),
+      x: gutter,
       y: Math.max(gutter, window.innerHeight - launcherSize - gutter)
     };
+  }
+
+  function getLocationSignature() {
+    return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  }
+
+  function deriveRouteContextValue() {
+    const pathSegments = window.location.pathname
+      .split("/")
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+    const primarySegment = pathSegments[0];
+
+    if (!primarySegment) {
+      return "Home";
+    }
+
+    return primarySegment
+      .replace(/[-_]+/g, " ")
+      .replace(/\b\w/g, (character) => character.toUpperCase());
   }
 
   function safeParse(value) {
