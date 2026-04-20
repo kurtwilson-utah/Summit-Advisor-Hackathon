@@ -6,9 +6,11 @@ import { MessageBubble } from "./components/MessageBubble";
 import { Sidebar } from "./components/Sidebar";
 import { ThinkingIndicator } from "./components/ThinkingIndicator";
 import { useEmailAccess } from "./hooks/useEmailAccess";
+import { useEmbeddedBridge } from "./hooks/useEmbeddedBridge";
 import { useChatWorkspace } from "./hooks/useChatWorkspace";
 
 function App() {
+  const embeddedBridge = useEmbeddedBridge();
   const {
     emailDraft,
     errorMessage,
@@ -17,23 +19,34 @@ function App() {
     setEmailDraft,
     signOut,
     submitEmail
-  } = useEmailAccess();
+  } = useEmailAccess({
+    isEmbeddedMode: embeddedBridge.isEmbeddedMode,
+    embeddedBootstrapUser: embeddedBridge.bootstrapUser
+  });
   const {
     activeThread,
     activeThinkingState,
     attachments,
+    contextItems,
     draft,
     handleAddFiles,
     handleNewThread,
+    handleRemoveContextItem,
     handleRemoveAttachment,
+    handleSelectThread,
     handleSend,
     isSending,
     isSidebarOpen,
     setDraft,
     setIsSidebarOpen,
-    setSelectedThreadId,
     threads
-  } = useChatWorkspace(session);
+  } = useChatWorkspace(session, {
+    isEmbeddedMode: embeddedBridge.isEmbeddedMode,
+    currentPageTitle: embeddedBridge.currentPageTitle,
+    widgetOpenSequence: embeddedBridge.widgetOpenSequence,
+    lastWidgetOpenedAt: embeddedBridge.lastWidgetOpenedAt,
+    lastWidgetClosedAt: embeddedBridge.lastWidgetClosedAt
+  });
   const conversationWindowRef = useRef<HTMLElement | null>(null);
   const conversationEndRef = useRef<HTMLDivElement | null>(null);
   const [composerMaxHeight, setComposerMaxHeight] = useState(180);
@@ -113,8 +126,8 @@ function App() {
     };
   }, [activeThread.id, activeThread.messages.length, activeThinkingState?.step.key]);
 
-  function handleSelectThread(threadId: string) {
-    setSelectedThreadId(threadId);
+  function handleThreadSelection(threadId: string) {
+    handleSelectThread(threadId);
 
     if (isMobileViewport()) {
       setIsSidebarOpen(false);
@@ -130,6 +143,28 @@ function App() {
   }
 
   if (!session) {
+    if (embeddedBridge.isEmbeddedMode) {
+      return (
+        <div className="embedded-pending-shell">
+          <div className="embedded-pending-card">
+            <div className="message-avatar" aria-hidden="true">
+              <PanelLeft size={16} />
+            </div>
+            <div>
+              <h2>Cyncly Advisor</h2>
+              <p>
+                {errorMessage
+                  ? errorMessage
+                  : embeddedBridge.bootstrapReady
+                    ? "Connecting your Summit session..."
+                    : "Waiting for Summit context..."}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <EmailGate
         emailDraft={emailDraft}
@@ -142,7 +177,9 @@ function App() {
   }
 
   return (
-    <div className={`app-shell ${isSidebarOpen ? "app-shell-sidebar-open" : "app-shell-sidebar-closed"}`}>
+    <div
+      className={`app-shell ${embeddedBridge.isEmbeddedMode ? "app-shell-embedded" : ""} ${isSidebarOpen ? "app-shell-sidebar-open" : "app-shell-sidebar-closed"}`}
+    >
       <button
         aria-hidden={!isSidebarOpen}
         aria-label="Close chat history"
@@ -151,16 +188,17 @@ function App() {
         type="button"
       />
 
-      <Sidebar
-        threads={threads}
-        selectedThreadId={activeThread.id}
-        onSelectThread={handleSelectThread}
-        onNewThread={handleCreateThread}
-        isOpen={isSidebarOpen}
-        onSignOut={signOut}
+        <Sidebar
+          threads={threads}
+          selectedThreadId={activeThread.id}
+          onSelectThread={handleThreadSelection}
+          onNewThread={handleCreateThread}
+          isOpen={isSidebarOpen}
+          onSignOut={signOut}
+          showSignOut={!embeddedBridge.isEmbeddedMode}
       />
 
-      <main className="workspace">
+      <main className={`workspace ${embeddedBridge.isEmbeddedMode ? "workspace-embedded" : ""}`}>
         <header className="app-header">
           <div className="header-title-group">
             <button
@@ -196,9 +234,11 @@ function App() {
           <Composer
             draft={draft}
             attachments={attachments}
+            contextItems={contextItems}
             isSending={isSending}
             onDraftChange={setDraft}
             onAddFiles={handleAddFiles}
+            onRemoveContextItem={handleRemoveContextItem}
             onRemoveAttachment={handleRemoveAttachment}
             onSend={handleSend}
             maxHeight={composerMaxHeight}

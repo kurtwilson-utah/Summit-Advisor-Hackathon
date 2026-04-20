@@ -1,4 +1,10 @@
-export type { AgentKey, AgentStatus, OrchestrationDecision, ThinkingStepDefinition } from "../../shared/chat";
+export type {
+  AgentKey,
+  AgentStatus,
+  ChatContextItemPayload,
+  OrchestrationDecision,
+  ThinkingStepDefinition
+} from "../../shared/chat";
 export type {
   ActiveThinkingState,
   AttachmentKind,

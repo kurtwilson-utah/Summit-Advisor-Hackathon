@@ -4,7 +4,7 @@ import type { SignedAccessSession } from "../../lib/accessSessionSigner.js";
 export interface EmailAccessResult extends SignedAccessSession {}
 
 export interface EmailAccessService {
-  requestAccess(email: string): Promise<EmailAccessResult | null>;
+  requestAccess(email: string, displayName?: string): Promise<EmailAccessResult | null>;
   verifySession(session: SignedAccessSession): boolean;
 }
 
@@ -16,7 +16,7 @@ export function createEmailAccessService(dependencies: {
   };
 }): EmailAccessService {
   return {
-    async requestAccess(email) {
+    async requestAccess(email, displayName) {
       const normalizedEmail = email.trim().toLowerCase();
 
       if (!isValidEmail(normalizedEmail)) {
@@ -31,7 +31,7 @@ export function createEmailAccessService(dependencies: {
 
       return dependencies.sessionSigner.sign({
         email: normalizedEmail,
-        displayName: createDisplayName(normalizedEmail)
+        displayName: sanitizeDisplayName(displayName) || createDisplayName(normalizedEmail)
       });
     },
     verifySession(session) {
@@ -52,4 +52,9 @@ function createDisplayName(email: string): string {
     .filter(Boolean)
     .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
     .join(" ");
+}
+
+function sanitizeDisplayName(displayName?: string) {
+  const trimmed = displayName?.trim() ?? "";
+  return trimmed.length > 0 ? trimmed : "";
 }

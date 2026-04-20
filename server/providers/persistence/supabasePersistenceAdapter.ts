@@ -163,19 +163,48 @@ export function createSupabasePersistenceAdapter(): ConversationPersistenceAdapt
     },
     async saveThreadSnapshot({ session, thread }) {
       const normalizedEmail = normalizeEmail(session.email);
+      const existingThreadResult = await client
+        .from(THREAD_TABLE)
+        .select(
+          "id, access_email, access_name, title, status_label, last_message_at, updated_at, summary, memory_digest, notion_status, agent_states"
+        )
+        .eq("id", thread.id)
+        .maybeSingle();
+
+      if (existingThreadResult.error) {
+        throw existingThreadResult.error;
+      }
+
+      const existingThread = (existingThreadResult.data as AdvisorThreadRow | null) ?? null;
+      const threadWritePayload =
+        !existingThread || isIncomingThreadFresher(existingThread, thread)
+          ? {
+              id: thread.id,
+              access_email: normalizedEmail,
+              access_name: session.displayName,
+              title: thread.title,
+              status_label: thread.statusLabel,
+              summary: thread.summary,
+              memory_digest: thread.memoryDigest,
+              notion_status: thread.notionStatus,
+              agent_states: thread.agentStates,
+              last_message_at: thread.updatedAt
+            }
+          : {
+              id: existingThread.id,
+              access_email: normalizedEmail,
+              access_name: session.displayName,
+              title: existingThread.title,
+              status_label: existingThread.status_label,
+              summary: existingThread.summary,
+              memory_digest: existingThread.memory_digest,
+              notion_status: existingThread.notion_status,
+              agent_states: existingThread.agent_states ?? [],
+              last_message_at: existingThread.last_message_at
+            };
+
       const threadUpsert = await client.from(THREAD_TABLE).upsert(
-        {
-          id: thread.id,
-          access_email: normalizedEmail,
-          access_name: session.displayName,
-          title: thread.title,
-          status_label: thread.statusLabel,
-          summary: thread.summary,
-          memory_digest: thread.memoryDigest,
-          notion_status: thread.notionStatus,
-          agent_states: thread.agentStates,
-          last_message_at: thread.updatedAt
-        },
+        threadWritePayload,
         {
           onConflict: "id"
         }
@@ -183,12 +212,6 @@ export function createSupabasePersistenceAdapter(): ConversationPersistenceAdapt
 
       if (threadUpsert.error) {
         throw threadUpsert.error;
-      }
-
-      const deleteResult = await client.from(MESSAGE_TABLE).delete().eq("thread_id", thread.id);
-
-      if (deleteResult.error) {
-        throw deleteResult.error;
       }
 
       if (thread.messages.length === 0) {
@@ -208,7 +231,9 @@ export function createSupabasePersistenceAdapter(): ConversationPersistenceAdapt
           attachments: message.attachments ?? [],
           redaction: message.redaction ?? null
         }));
-        const insertResult = await client.from(MESSAGE_TABLE).insert(batch);
+        const insertResult = await client.from(MESSAGE_TABLE).upsert(batch, {
+          onConflict: "id"
+        });
 
         if (insertResult.error) {
           throw insertResult.error;
@@ -393,4 +418,15 @@ export function createSupabasePersistenceAdapter(): ConversationPersistenceAdapt
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+function isIncomingThreadFresher(existingThread: AdvisorThreadRow, incomingThread: ChatThread) {
+  const existingActivity = new Date(existingThread.last_message_at).getTime();
+  const incomingActivity = new Date(incomingThread.updatedAt).getTime();
+
+  if (incomingActivity !== existingActivity) {
+    return incomingActivity > existingActivity;
+  }
+
+  return new Date(incomingThread.updatedAt).getTime() >= new Date(existingThread.updated_at).getTime();
 }

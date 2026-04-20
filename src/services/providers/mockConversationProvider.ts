@@ -4,7 +4,7 @@ import type { ConversationProviderAdapter } from "./conversationProvider";
 
 export function createMockConversationProvider(): ConversationProviderAdapter {
   return {
-    async createAssistantMessage({ thread, userMessage, decision, attachments }) {
+    async createAssistantMessage({ thread, userMessage, decision, attachments, contextItems }) {
       const delegatedLabels = decision.delegatedAgents.map(getAgentLabel);
 
       const delegatedLine = delegatedLabels.length
@@ -14,6 +14,9 @@ export function createMockConversationProvider(): ConversationProviderAdapter {
       const attachmentLine = attachments.length
         ? `I noticed ${attachments.length} uploaded file${attachments.length === 1 ? "" : "s"} and would route them through the private RAG pipeline before a live Claude call.`
         : "This request does not need file retrieval yet, so the turn can run from prompts plus compressed thread memory.";
+      const contextLine = contextItems.length
+        ? `This turn also received host context: ${contextItems.map((item) => item.label).join(", ")}.`
+        : "No host-app context was supplied for this turn.";
 
       return {
         id: crypto.randomUUID(),
@@ -23,6 +26,7 @@ export function createMockConversationProvider(): ConversationProviderAdapter {
           "Here’s how this runtime is behaving right now:",
           delegatedLine,
           attachmentLine,
+          contextLine,
           `The current memory digest for this thread is: ${thread.memoryDigest}`,
           `The protected model payload for your latest message begins with: ${userMessage.bodyModel?.slice(0, 120) ?? "(no model payload recorded)"}`,
           "When we swap in the live adapters, this same contract becomes the Claude request plus persistence and finalization hooks."

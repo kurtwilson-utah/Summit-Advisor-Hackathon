@@ -9,6 +9,7 @@ interface SidebarProps {
   onNewThread: () => void;
   isOpen: boolean;
   onSignOut: () => void;
+  showSignOut?: boolean;
 }
 
 export function Sidebar({
@@ -17,7 +18,8 @@ export function Sidebar({
   onSelectThread,
   onNewThread,
   isOpen,
-  onSignOut
+  onSignOut,
+  showSignOut = true
 }: SidebarProps) {
   return (
     <aside className={`sidebar ${isOpen ? "sidebar-open" : ""}`}>
@@ -66,12 +68,14 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="sidebar-footer">
-        <button className="secondary-button sidebar-signout" onClick={onSignOut} type="button">
-          <LogOut size={14} />
-          Sign out
-        </button>
-      </div>
+      {showSignOut ? (
+        <div className="sidebar-footer">
+          <button className="secondary-button sidebar-signout" onClick={onSignOut} type="button">
+            <LogOut size={14} />
+            Sign out
+          </button>
+        </div>
+      ) : null}
     </aside>
   );
 }

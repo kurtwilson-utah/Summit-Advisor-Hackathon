@@ -1,4 +1,4 @@
-import { FileSpreadsheet, FileText, Image, ShieldCheck, Sparkles, Video } from "lucide-react";
+import { FileSpreadsheet, FileText, Image, Sparkles, Video } from "lucide-react";
 import { formatTimestamp } from "../lib/chatEngine";
 import type { AttachmentKind, ChatMessage } from "../lib/types";
 
@@ -32,14 +32,6 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             <strong>{message.authorLabel}</strong>
             <span>{formatTimestamp(message.createdAt)}</span>
           </div>
-
-          {message.redaction?.entities.length ? (
-            <div className="pii-pill">
-              <ShieldCheck size={14} />
-              {message.redaction.entities.length} protected field
-              {message.redaction.entities.length === 1 ? "" : "s"}
-            </div>
-          ) : null}
         </div>
 
         <p>{message.bodyDisplay}</p>

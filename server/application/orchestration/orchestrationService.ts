@@ -1,6 +1,7 @@
 import type {
   AgentKey,
   ChatAttachmentPayload,
+  ChatContextItemPayload,
   ChatTurnMessagePayload,
   OrchestrationDecision,
   RetrievedKnowledgeSource,
@@ -28,6 +29,7 @@ export interface OrchestrationService {
     threadTitle: string;
     bodyRedacted: string;
     attachments: ChatAttachmentPayload[];
+    contextItems: ChatContextItemPayload[];
     memoryDigest?: string;
     recentMessages?: ChatTurnMessagePayload[];
   }): Promise<ExecuteTurnResult>;
@@ -40,7 +42,7 @@ export function createOrchestrationService(dependencies: {
   knowledgeRetrievalService: KnowledgeRetrievalService;
 }): OrchestrationService {
   return {
-    async executeTurn({ threadId, threadTitle, bodyRedacted, attachments, memoryDigest, recentMessages = [] }) {
+    async executeTurn({ threadId, threadTitle, bodyRedacted, attachments, contextItems, memoryDigest, recentMessages = [] }) {
       const persistedContext = await dependencies.persistenceService.loadThreadContext(threadId);
       const processedAttachments = await dependencies.attachmentProcessingService.processAttachments({
         threadId,
@@ -68,6 +70,7 @@ export function createOrchestrationService(dependencies: {
               memoryDigest: effectiveMemoryDigest,
               recentMessages,
               attachments,
+              contextItems,
               processedAttachments: processedAttachments.attachments,
               instructions: [
                 "Use only the supplied Summit knowledge snippets.",
@@ -89,6 +92,7 @@ export function createOrchestrationService(dependencies: {
               userMessage: bodyRedacted,
               memoryDigest: effectiveMemoryDigest,
               recentMessages,
+              contextItems,
               processedAttachments: processedAttachments.attachments
             }),
             maxTokens: 500
@@ -108,6 +112,7 @@ export function createOrchestrationService(dependencies: {
             memoryDigest: effectiveMemoryDigest,
             recentMessages,
             attachments,
+            contextItems,
             processedAttachments: processedAttachments.attachments,
             knowledgeMemo,
             researchMemo,
@@ -210,6 +215,7 @@ function buildSpecialistPrompt(args: {
   memoryDigest: string;
   recentMessages: ChatTurnMessagePayload[];
   attachments: ChatAttachmentPayload[];
+  contextItems: ChatContextItemPayload[];
   processedAttachments: ProcessedChatAttachment[];
   instructions: string[];
   sources: RetrievedKnowledgeSource[];
@@ -218,6 +224,7 @@ function buildSpecialistPrompt(args: {
     `Customer message:\n${args.userMessage}`,
     `Thread memory digest:\n${args.memoryDigest}`,
     formatRecentMessages(args.recentMessages),
+    formatContextItems(args.contextItems),
     formatAttachments(args.attachments),
     formatProcessedAttachments(args.processedAttachments),
     `Retrieved knowledge for this turn:\n${formatSources(args.sources)}`,
@@ -232,12 +239,14 @@ function buildResearchPrompt(args: {
   userMessage: string;
   memoryDigest: string;
   recentMessages: ChatTurnMessagePayload[];
+  contextItems: ChatContextItemPayload[];
   processedAttachments: ProcessedChatAttachment[];
 }) {
   return [
     `Customer message:\n${args.userMessage}`,
     `Thread memory digest:\n${args.memoryDigest}`,
     formatRecentMessages(args.recentMessages),
+    formatContextItems(args.contextItems),
     formatProcessedAttachments(args.processedAttachments),
     "Constraints:",
     "- Live web browsing is not available in this runtime.",
@@ -255,6 +264,7 @@ function buildPrimaryPrompt(args: {
   memoryDigest: string;
   recentMessages: ChatTurnMessagePayload[];
   attachments: ChatAttachmentPayload[];
+  contextItems: ChatContextItemPayload[];
   processedAttachments: ProcessedChatAttachment[];
   knowledgeMemo: string;
   researchMemo: string;
@@ -266,6 +276,7 @@ function buildPrimaryPrompt(args: {
     `Latest customer message:\n${args.userMessage}`,
     `Compressed thread memory:\n${args.memoryDigest}`,
     formatRecentMessages(args.recentMessages),
+    formatContextItems(args.contextItems),
     formatAttachments(args.attachments),
     formatProcessedAttachments(args.processedAttachments),
     args.knowledgeMemo ? `Summit Knowledge Agent memo:\n${args.knowledgeMemo}` : "",
@@ -305,6 +316,16 @@ function formatAttachments(attachments: ChatAttachmentPayload[]) {
 
   return `Attachment metadata:\n${attachments
     .map((attachment) => `- ${attachment.name} (${attachment.kind}, ${attachment.mimeType}, ${attachment.sizeBytes} bytes)`)
+    .join("\n")}`;
+}
+
+function formatContextItems(contextItems: ChatContextItemPayload[]) {
+  if (contextItems.length === 0) {
+    return "";
+  }
+
+  return `Host app context for this turn:\n${contextItems
+    .map((item) => `- ${item.label}: ${item.value}`)
     .join("\n")}`;
 }
 

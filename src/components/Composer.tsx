@@ -1,14 +1,16 @@
 import { useEffect, useRef, type KeyboardEvent } from "react";
-import { Paperclip, Send, X } from "lucide-react";
-import type { PendingAttachmentDraft } from "../lib/types";
+import { AppWindow, Paperclip, Send, X } from "lucide-react";
+import type { ChatContextItemPayload, PendingAttachmentDraft } from "../lib/types";
 
 interface ComposerProps {
   draft: string;
   attachments: PendingAttachmentDraft[];
+  contextItems: ChatContextItemPayload[];
   isSending: boolean;
   maxHeight: number;
   onDraftChange: (value: string) => void;
   onAddFiles: (files: FileList | null) => void;
+  onRemoveContextItem: (contextItemId: string) => void;
   onRemoveAttachment: (attachmentId: string) => void;
   onSend: () => void;
 }
@@ -16,10 +18,12 @@ interface ComposerProps {
 export function Composer({
   draft,
   attachments,
+  contextItems,
   isSending,
   maxHeight,
   onDraftChange,
   onAddFiles,
+  onRemoveContextItem,
   onRemoveAttachment,
   onSend
 }: ComposerProps) {
@@ -54,6 +58,25 @@ export function Composer({
 
   return (
     <section className="composer-shell">
+      {contextItems.length ? (
+        <div className="composer-context-list">
+          {contextItems.map((contextItem) => (
+            <div className="composer-context-pill" key={contextItem.id}>
+              <AppWindow size={14} />
+              <span>{contextItem.value}</span>
+              <button
+                aria-label={`Remove ${contextItem.label} context`}
+                className="attachment-remove"
+                onClick={() => onRemoveContextItem(contextItem.id)}
+                type="button"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       {attachments.length ? (
         <div className="composer-attachments">
           {attachments.map((attachment) => (

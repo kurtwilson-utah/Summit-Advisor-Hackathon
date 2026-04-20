@@ -45,6 +45,12 @@ const agentStateSchema = z.object({
   detail: z.string()
 });
 
+const contextItemSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  value: z.string()
+});
+
 const threadSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -80,6 +86,7 @@ const chatRequestSchema = z.object({
       })
     )
     .default([]),
+  contextItems: z.array(contextItemSchema).default([]),
   memoryDigest: z.string().default(""),
   recentMessages: z
     .array(
@@ -99,7 +106,8 @@ const finalizeSchema = z.object({
 });
 
 const accessRequestSchema = z.object({
-  email: z.string()
+  email: z.string(),
+  displayName: z.string().optional()
 });
 
 const listThreadsSchema = z.object({
@@ -137,7 +145,7 @@ export function getHealthResponse(): JsonResponse {
 export async function handleEmailAccess(rawPayload: unknown): Promise<JsonResponse> {
   const payload = accessRequestSchema.parse(parseJsonPayload(rawPayload));
   const appServices = await getAppServices();
-  const accessResult = await appServices.emailAccessService.requestAccess(payload.email);
+  const accessResult = await appServices.emailAccessService.requestAccess(payload.email, payload.displayName);
 
   if (!accessResult) {
     return {
@@ -166,6 +174,7 @@ export async function handleChatSend(rawPayload: unknown): Promise<JsonResponse>
     threadTitle: payload.threadTitle,
     bodyRedacted: payload.bodyRedacted,
     attachments: payload.attachments,
+    contextItems: payload.contextItems,
     memoryDigest: payload.memoryDigest,
     recentMessages: payload.recentMessages
   });

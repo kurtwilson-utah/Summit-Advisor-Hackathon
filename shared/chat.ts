@@ -25,6 +25,12 @@ export interface ChatTurnMessagePayload {
   body: string;
 }
 
+export interface ChatContextItemPayload {
+  id: string;
+  label: string;
+  value: string;
+}
+
 export interface ChatAttachmentPayload {
   id: string;
   name: string;
@@ -51,6 +57,7 @@ export interface ChatTurnRequest {
   bodyRedacted: string;
   redactionMap: unknown[];
   attachments: ChatAttachmentPayload[];
+  contextItems: ChatContextItemPayload[];
   memoryDigest: string;
   recentMessages: ChatTurnMessagePayload[];
 }
