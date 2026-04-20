@@ -1,6 +1,7 @@
 import { PanelLeft } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Composer } from "./components/Composer";
+import { EmptyThreadState } from "./components/EmptyThreadState";
 import { EmailGate } from "./components/EmailGate";
 import { MessageBubble } from "./components/MessageBubble";
 import { Sidebar } from "./components/Sidebar";
@@ -8,7 +9,8 @@ import { ThinkingIndicator } from "./components/ThinkingIndicator";
 import { useEmailAccess } from "./hooks/useEmailAccess";
 import { useEmbeddedBridge } from "./hooks/useEmbeddedBridge";
 import { useChatWorkspace } from "./hooks/useChatWorkspace";
-import { deriveQuickReplies } from "./lib/quickReplies";
+import { getVisibleThreadMessages, isUnsentDraftThread } from "./lib/chatEngine";
+import { deriveQuickReplies, EMPTY_THREAD_QUICK_REPLY_TARGET } from "./lib/quickReplies";
 
 function App() {
   const embeddedBridge = useEmbeddedBridge();
@@ -53,6 +55,8 @@ function App() {
   const conversationWindowRef = useRef<HTMLElement | null>(null);
   const conversationEndRef = useRef<HTMLDivElement | null>(null);
   const [composerMaxHeight, setComposerMaxHeight] = useState(180);
+  const visibleMessages = useMemo(() => getVisibleThreadMessages(activeThread), [activeThread]);
+  const shouldShowEmptyThreadState = isUnsentDraftThread(activeThread) && visibleMessages.length === 0;
   const activeQuickReplies = useMemo(
     () =>
       deriveQuickReplies({
@@ -136,7 +140,7 @@ function App() {
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [activeThread.id, activeThread.messages.length, activeThinkingState?.step.key]);
+  }, [activeThread.id, visibleMessages.length, activeThinkingState?.step.key, shouldShowEmptyThreadState]);
 
   function handleThreadSelection(threadId: string) {
     handleSelectThread(threadId);
@@ -206,6 +210,7 @@ function App() {
           onSelectThread={handleThreadSelection}
           onNewThread={handleCreateThread}
           isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
           onSignOut={signOut}
           showSignOut={!embeddedBridge.isEmbeddedMode}
       />
@@ -231,7 +236,17 @@ function App() {
         <section className="conversation-window" ref={conversationWindowRef}>
           <div className="conversation-inner">
             <section className="message-list">
-              {activeThread.messages.map((message) => (
+              {shouldShowEmptyThreadState ? (
+                <EmptyThreadState
+                  displayName={session.displayName}
+                  onQuickReplySelect={handleQuickReplySend}
+                  quickReplies={
+                    activeQuickReplies?.messageId === EMPTY_THREAD_QUICK_REPLY_TARGET ? activeQuickReplies.options : []
+                  }
+                  quickRepliesDisabled={isSending}
+                />
+              ) : null}
+              {visibleMessages.map((message) => (
                 <MessageBubble
                   key={message.id}
                   message={message}

@@ -161,7 +161,7 @@ export function createSupabasePersistenceAdapter(): ConversationPersistenceAdapt
         agentStates: thread.agent_states ?? [],
         messages: messagesByThread.get(thread.id) ?? []
       }))
-        .filter(hasUserStartedThread);
+        .filter(hasPersistableThreadHistory);
     },
     async saveThreadSnapshot({ session, thread }) {
       const normalizedEmail = normalizeEmail(session.email);
@@ -433,6 +433,16 @@ function isIncomingThreadFresher(existingThread: AdvisorThreadRow, incomingThrea
   return new Date(incomingThread.updatedAt).getTime() >= new Date(existingThread.updated_at).getTime();
 }
 
-function hasUserStartedThread(thread: ChatThread) {
-  return thread.messages.some((message) => message.role === "user");
+function hasPersistableThreadHistory(thread: ChatThread) {
+  return thread.messages.some((message, index) => !isHiddenAdvisorGreetingMessage(message, index));
+}
+
+function isHiddenAdvisorGreetingMessage(message: ChatMessage, index: number) {
+  if (index !== 0 || message.role !== "assistant" || message.authorLabel !== "Cyncly Advisor") {
+    return false;
+  }
+
+  return /I can help answer questions about Summit, and can submit ideas on your behalf\. What can I help you with today\?/i.test(
+    message.bodyDisplay
+  );
 }

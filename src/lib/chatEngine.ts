@@ -138,8 +138,6 @@ export function createIdleAgentStates(): ThreadAgentState[] {
 
 export function createEmptyThread(displayName?: string | null): ChatThread {
   const now = new Date().toISOString();
-  const greetingName = deriveGreetingName(displayName);
-  const greetingPrefix = greetingName ? `Hi, ${greetingName}!` : "Hi!";
 
   return {
     id: crypto.randomUUID(),
@@ -150,32 +148,20 @@ export function createEmptyThread(displayName?: string | null): ChatThread {
     memoryDigest: "No hidden summary yet.",
     notionStatus: "Not exported",
     agentStates: createIdleAgentStates(),
-    messages: [
-      {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        authorLabel: "Cyncly Advisor",
-        bodyDisplay: `${greetingPrefix} I can help answer questions about Summit, and can submit ideas on your behalf. What can I help you with today?`,
-        createdAt: now,
-        agentKey: "summit-product-manager"
-      }
-    ]
+    messages: []
   };
 }
 
 export function isUnsentDraftThread(thread: ChatThread): boolean {
-  const nonAssistantMessages = thread.messages.filter((message) => message.role !== "assistant");
-
-  return (
-    thread.title === "New conversation" &&
-    nonAssistantMessages.length === 0 &&
-    thread.messages.length === 1 &&
-    thread.messages[0]?.role === "assistant"
-  );
+  return thread.title === "New conversation" && getVisibleThreadMessages(thread).length === 0;
 }
 
 export function hasUserStartedThread(thread: ChatThread): boolean {
   return thread.messages.some((message) => message.role === "user");
+}
+
+export function hasPersistableThreadHistory(thread: ChatThread): boolean {
+  return getVisibleThreadMessages(thread).length > 0;
 }
 
 export function getThreadActivityTimestamp(thread: ChatThread): string {
@@ -207,7 +193,7 @@ export function sortThreadsByRecentActivity(threads: ChatThread[]): ChatThread[]
 }
 
 export function filterPersistableThreads(threads: ChatThread[]): ChatThread[] {
-  return normalizeThreadCollection(threads.filter(hasUserStartedThread));
+  return normalizeThreadCollection(threads.filter(hasPersistableThreadHistory));
 }
 
 export function summarizeThread(messages: ChatMessage[]): string {
@@ -221,6 +207,31 @@ export function summarizeThread(messages: ChatMessage[]): string {
   return lastMessages
     .map((message) => `${message.authorLabel}: ${message.bodyDisplay.slice(0, 110)}`)
     .join(" | ");
+}
+
+export function getEmptyThreadGreeting(displayName?: string | null) {
+  const greetingName = deriveGreetingName(displayName);
+  const greetingPrefix = greetingName ? `Hi, ${greetingName}!` : "Hi!";
+
+  return `${greetingPrefix} I can help answer questions about Summit, and can submit ideas on your behalf. What can I help you with today?`;
+}
+
+export function getVisibleThreadMessages(thread: ChatThread): ChatMessage[] {
+  return thread.messages.filter((message, index) => !isHiddenAdvisorGreetingMessage(message, index));
+}
+
+export function isHiddenAdvisorGreetingMessage(message: ChatMessage, index?: number) {
+  if (message.role !== "assistant" || message.authorLabel !== "Cyncly Advisor") {
+    return false;
+  }
+
+  if (typeof index === "number" && index !== 0) {
+    return false;
+  }
+
+  return /I can help answer questions about Summit, and can submit ideas on your behalf\. What can I help you with today\?/i.test(
+    message.bodyDisplay
+  );
 }
 
 export function deriveThreadTitle(currentTitle: string, newestUserText: string): string {

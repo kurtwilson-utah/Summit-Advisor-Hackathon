@@ -1,4 +1,4 @@
-import { LogOut, MessageSquareText, Plus } from "lucide-react";
+import { LogOut, MessageSquareText, Plus, X } from "lucide-react";
 import { formatHistoryTimestamp, getThreadActivityTimestamp } from "../lib/chatEngine";
 import type { ChatThread } from "../lib/types";
 
@@ -8,6 +8,7 @@ interface SidebarProps {
   onSelectThread: (threadId: string) => void;
   onNewThread: () => void;
   isOpen: boolean;
+  onClose: () => void;
   onSignOut: () => void;
   showSignOut?: boolean;
 }
@@ -18,6 +19,7 @@ export function Sidebar({
   onSelectThread,
   onNewThread,
   isOpen,
+  onClose,
   onSignOut,
   showSignOut = true
 }: SidebarProps) {
@@ -28,6 +30,15 @@ export function Sidebar({
           <p className="eyebrow">Cyncly Advisor</p>
           <h1>Chats</h1>
         </div>
+
+        <button
+          aria-label="Close chat history"
+          className="sidebar-close-button secondary-button"
+          onClick={onClose}
+          type="button"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       <button className="primary-button" onClick={onNewThread} type="button">
@@ -59,7 +70,6 @@ export function Sidebar({
                 <p>{thread.summary}</p>
 
                 <div className="thread-card-footer">
-                  <span>{thread.statusLabel}</span>
                   <span>{formatHistoryTimestamp(getThreadActivityTimestamp(thread))}</span>
                 </div>
               </button>

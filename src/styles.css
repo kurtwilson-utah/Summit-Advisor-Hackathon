@@ -217,6 +217,14 @@ button {
   gap: 12px;
 }
 
+.sidebar-close-button {
+  display: none;
+  flex: 0 0 auto;
+  height: 40px;
+  padding: 0;
+  width: 40px;
+}
+
 .header-title-group {
   align-items: center;
   display: flex;
@@ -376,6 +384,10 @@ button {
   font-size: 0.85rem;
 }
 
+.thread-card-footer {
+  justify-content: flex-end;
+}
+
 .thread-card-footer span:last-child {
   margin-left: auto;
 }
@@ -482,6 +494,48 @@ button {
 
 .message-list {
   gap: 18px;
+}
+
+.empty-thread-state {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  justify-content: center;
+  margin: auto 0;
+  min-height: min(320px, 50vh);
+  padding: 24px 0;
+  text-align: center;
+}
+
+.empty-thread-icon {
+  align-items: center;
+  background: rgba(96, 56, 232, 0.12);
+  border-radius: 999px;
+  color: var(--assistant-avatar);
+  display: inline-flex;
+  height: 52px;
+  justify-content: center;
+  width: 52px;
+}
+
+.empty-thread-copy {
+  max-width: 420px;
+}
+
+.empty-thread-copy p {
+  color: var(--text-strong);
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.empty-thread-quick-replies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  max-width: 560px;
 }
 
 .message-row {
@@ -861,6 +915,10 @@ button {
     visibility: hidden;
     width: min(86vw, 360px);
     z-index: 30;
+  }
+
+  .sidebar-close-button {
+    display: inline-flex;
   }
 
   .sidebar-open {

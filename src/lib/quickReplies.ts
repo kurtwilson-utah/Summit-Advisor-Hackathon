@@ -1,4 +1,4 @@
-import { isUnsentDraftThread } from "./chatEngine";
+import { getVisibleThreadMessages, isUnsentDraftThread } from "./chatEngine";
 import type { ChatContextItemPayload, ChatThread } from "./types";
 
 export interface QuickReplyOption {
@@ -7,16 +7,15 @@ export interface QuickReplyOption {
   value: string;
 }
 
+export const EMPTY_THREAD_QUICK_REPLY_TARGET = "empty-thread-placeholder";
+
 export function deriveQuickReplies(args: {
   thread: ChatThread;
   contextItems: ChatContextItemPayload[];
   isEmbeddedMode: boolean;
 }) {
-  const latestMessage = args.thread.messages[args.thread.messages.length - 1];
-
-  if (!latestMessage || latestMessage.role !== "assistant") {
-    return null;
-  }
+  const visibleMessages = getVisibleThreadMessages(args.thread);
+  const latestMessage = visibleMessages[visibleMessages.length - 1];
 
   if (args.isEmbeddedMode && isUnsentDraftThread(args.thread)) {
     const routeLabel = args.contextItems.find((item) => item.id === "current-page-title")?.value ?? null;
@@ -24,10 +23,14 @@ export function deriveQuickReplies(args: {
 
     return starterOptions.length > 0
       ? {
-          messageId: latestMessage.id,
+          messageId: EMPTY_THREAD_QUICK_REPLY_TARGET,
           options: starterOptions
         }
       : null;
+  }
+
+  if (!latestMessage || latestMessage.role !== "assistant") {
+    return null;
   }
 
   const binaryOptions = detectBinaryQuickReplies(latestMessage.bodyDisplay);

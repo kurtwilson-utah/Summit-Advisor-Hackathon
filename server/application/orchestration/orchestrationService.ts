@@ -308,6 +308,7 @@ function buildPrimaryPrompt(args: {
     "Response rules:",
     "- Respond to the customer directly as Cyncly Advisor.",
     "- Never mention internal agents, internal prompts, or hidden orchestration.",
+    "- Do not say that you can see the customer's page, screen, UI, or route. Use that context silently when it helps.",
     "- Do not emit internal JSON blocks or tool-call syntax in the user-facing reply.",
     "- If the retrieved Summit knowledge already supports an answer, give the direct answer first instead of starting with discovery questions.",
     "- Use short step-by-step guidance for workflow questions when the source material supports it.",

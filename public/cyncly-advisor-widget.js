@@ -406,9 +406,126 @@
       return "Home";
     }
 
-    return primarySegment
-      .replace(/[-_]+/g, " ")
-      .replace(/\b\w/g, (character) => character.toUpperCase());
+    return humanizeRouteSegment(primarySegment);
+  }
+
+  function humanizeRouteSegment(segment) {
+    const decodedSegment = decodeURIComponent(segment)
+      .replace(/\?.*$/, "")
+      .replace(/#.*/, "")
+      .trim();
+
+    if (!decodedSegment) {
+      return "Home";
+    }
+
+    const separatedSegment = decodedSegment
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/[-_]+/g, " ");
+    const baseWords = separatedSegment
+      .split(/\s+/)
+      .filter(Boolean)
+      .flatMap((word) => splitCompoundRouteWord(word));
+
+    return baseWords
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  }
+
+  function splitCompoundRouteWord(word) {
+    const normalizedWord = word.trim();
+
+    if (!normalizedWord) {
+      return [];
+    }
+
+    if (/[A-Z]/.test(normalizedWord) || normalizedWord.includes(" ")) {
+      return normalizedWord.split(/\s+/).filter(Boolean).map((entry) => entry.toLowerCase());
+    }
+
+    const lowerWord = normalizedWord.toLowerCase();
+    const knownSegments = [
+      "sales",
+      "orders",
+      "order",
+      "purchase",
+      "purchasing",
+      "proposal",
+      "proposals",
+      "project",
+      "projects",
+      "catalog",
+      "catalogs",
+      "pricing",
+      "services",
+      "service",
+      "contact",
+      "contacts",
+      "records",
+      "record",
+      "dashboard",
+      "dashboards",
+      "reporting",
+      "inventory",
+      "warehouse",
+      "scheduling",
+      "installation",
+      "roles",
+      "role",
+      "users",
+      "user",
+      "taxes",
+      "tax",
+      "permissions",
+      "permission",
+      "screen",
+      "screens",
+      "overview",
+      "jobs",
+      "job",
+      "types",
+      "type",
+      "design",
+      "flex",
+      "measure",
+      "mobile",
+      "customer",
+      "customers",
+      "communication",
+      "communications",
+      "financials",
+      "financial",
+      "accounting",
+      "api",
+      "apis",
+      "integrations",
+      "integration",
+      "receiving",
+      "post",
+      "close",
+      "profit",
+      "general",
+      "access",
+      "sign",
+      "in"
+    ];
+    const sortedSegments = [...knownSegments].sort((left, right) => right.length - left.length);
+    const splitWords = [];
+    let cursor = 0;
+
+    while (cursor < lowerWord.length) {
+      const remaining = lowerWord.slice(cursor);
+      const matchingSegment = sortedSegments.find((segmentPart) => remaining.startsWith(segmentPart));
+
+      if (!matchingSegment) {
+        return [lowerWord];
+      }
+
+      splitWords.push(matchingSegment);
+      cursor += matchingSegment.length;
+    }
+
+    return splitWords;
   }
 
   function buildHiddenHostPageContext() {

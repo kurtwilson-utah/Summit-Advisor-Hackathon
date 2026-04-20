@@ -57,6 +57,19 @@ function createHostContextItems(pageTitle: string | null) {
   ];
 }
 
+function resolveActiveHiddenHostPageContext(
+  contextItems: ChatContextItemPayload[],
+  hiddenHostPageContext: HiddenHostPageContextPayload | null | undefined
+) {
+  const currentPageItem = contextItems.find((item) => item.id === "current-page-title");
+
+  if (!currentPageItem || !hiddenHostPageContext) {
+    return null;
+  }
+
+  return currentPageItem.value === hiddenHostPageContext.routeLabel ? hiddenHostPageContext : null;
+}
+
 export function useChatWorkspace(
   session: EmailAccessSession | null,
   options?: {
@@ -81,9 +94,14 @@ export function useChatWorkspace(
     typeof window === "undefined" ? !options?.isEmbeddedMode : !options?.isEmbeddedMode && window.innerWidth > 940
   );
   const [activeThinkingState, setActiveThinkingState] = useState<ActiveThinkingState | null>(null);
+  const threadsRef = useRef<ChatThread[]>(threads);
   const finalizingThreadIdsRef = useRef<Set<string>>(new Set());
   const refreshInFlightRef = useRef(false);
   const lastHandledWidgetOpenSequenceRef = useRef(0);
+
+  useEffect(() => {
+    threadsRef.current = threads;
+  }, [threads]);
 
   useEffect(() => {
     applyTheme(defaultTheme);
@@ -315,29 +333,30 @@ export function useChatWorkspace(
   }, [activeThread, session]);
 
   function updateThread(threadId: string, updater: (thread: ChatThread) => ChatThread) {
-    setThreads((currentThreads) =>
-      normalizeThreadCollection(currentThreads.map((thread) => (thread.id === threadId ? updater(thread) : thread)))
-    );
+    setThreads((currentThreads) => {
+      const nextThreads = normalizeThreadCollection(
+        currentThreads.map((thread) => (thread.id === threadId ? updater(thread) : thread))
+      );
+      threadsRef.current = nextThreads;
+      return nextThreads;
+    });
   }
 
   function handleNewThread() {
-    let selectedDraftId = "";
+    const currentThreads = threadsRef.current;
+    const currentDraft = currentThreads.find(isUnsentDraftThread);
+    const nextDraftThread = currentDraft ?? runtime.createThread(session?.displayName);
+    const nextThreads = currentDraft
+      ? normalizeThreadCollection(currentThreads)
+      : normalizeThreadCollection([nextDraftThread, ...currentThreads]);
+    const isAlreadyOnSelectedDraft = activeThread?.id === nextDraftThread.id && isUnsentDraftThread(activeThread);
 
-    setThreads((currentThreads) => {
-      const existingDraft = currentThreads.find(isUnsentDraftThread);
+    threadsRef.current = nextThreads;
+    setThreads(nextThreads);
+    setSelectedThreadId(nextDraftThread.id);
 
-      if (existingDraft) {
-        selectedDraftId = existingDraft.id;
-        return normalizeThreadCollection(currentThreads);
-      }
-
-      const newThread = runtime.createThread(session?.displayName);
-      selectedDraftId = newThread.id;
-      return normalizeThreadCollection([newThread, ...currentThreads]);
-    });
-
-    if (selectedDraftId) {
-      setSelectedThreadId(selectedDraftId);
+    if (isAlreadyOnSelectedDraft) {
+      return;
     }
 
     setDraft("");
@@ -379,6 +398,10 @@ export function useChatWorkspace(
     const currentAttachments = args.attachmentsToSend;
     const currentContextItems = args.contextItemsToSend;
     const preserveComposerState = Boolean(args.preserveComposerState);
+    const activeHiddenHostPageContext = resolveActiveHiddenHostPageContext(
+      currentContextItems,
+      options?.hiddenHostPageContext ?? null
+    );
 
     if (!preserveComposerState) {
       setDraft("");
@@ -391,7 +414,7 @@ export function useChatWorkspace(
       draft: currentDraft,
       attachments: currentAttachments,
       contextItems: currentContextItems,
-      hiddenHostPageContext: options?.hiddenHostPageContext ?? null,
+      hiddenHostPageContext: activeHiddenHostPageContext,
       onOptimisticUpdate(thread) {
         updateThread(thread.id, () => thread);
       },
