@@ -13,6 +13,7 @@ import type {
   ChatContextItemPayload,
   ChatThread,
   EmailAccessSession,
+  HiddenHostPageContextPayload,
   PendingAttachmentDraft
 } from "../lib/types";
 import { createThreadFinalizationService } from "../services/finalization/threadFinalizationService";
@@ -61,6 +62,7 @@ export function useChatWorkspace(
   options?: {
     isEmbeddedMode?: boolean;
     currentPageTitle?: string | null;
+    hiddenHostPageContext?: HiddenHostPageContextPayload | null;
     widgetOpenSequence?: number;
     lastWidgetOpenedAt?: number | null;
     lastWidgetClosedAt?: number | null;
@@ -157,16 +159,19 @@ export function useChatWorkspace(
       try {
         const remoteThreads = await persistenceService.loadRemoteThreads(session);
 
-        if (cancelled || remoteThreads.length === 0) {
+        if (cancelled) {
           return;
         }
 
-        setThreads((currentThreads) => mergeThreads(remoteThreads, currentThreads));
-        setSelectedThreadId((currentSelectedThreadId) =>
-          remoteThreads.some((thread) => thread.id === currentSelectedThreadId)
-            ? currentSelectedThreadId
-            : normalizeThreadCollection(remoteThreads)[0].id
-        );
+        setThreads((currentThreads) => {
+          const mergedThreads = mergeThreads(remoteThreads, currentThreads);
+
+          setSelectedThreadId((currentSelectedThreadId) =>
+            resolveSelectedThreadId(currentSelectedThreadId, currentThreads, mergedThreads)
+          );
+
+          return mergedThreads;
+        });
       } catch (error) {
         console.error("Unable to hydrate remote threads.", error);
       } finally {
@@ -202,12 +207,15 @@ export function useChatWorkspace(
     }
 
     return persistenceService.subscribeToThreads(sessionEmail, (incomingThreads) => {
-      setThreads((currentThreads) => mergeThreads(incomingThreads, currentThreads));
-      setSelectedThreadId((currentSelectedThreadId) =>
-        incomingThreads.some((thread) => thread.id === currentSelectedThreadId)
-          ? currentSelectedThreadId
-          : normalizeThreadCollection(incomingThreads)[0]?.id ?? currentSelectedThreadId
-      );
+      setThreads((currentThreads) => {
+        const mergedThreads = mergeThreads(incomingThreads, currentThreads);
+
+        setSelectedThreadId((currentSelectedThreadId) =>
+          resolveSelectedThreadId(currentSelectedThreadId, currentThreads, mergedThreads)
+        );
+
+        return mergedThreads;
+      });
     });
   }, [sessionEmail]);
 
@@ -357,17 +365,25 @@ export function useChatWorkspace(
     setContextItems((currentItems) => currentItems.filter((item) => item.id !== contextItemId));
   }
 
-  async function handleSend() {
+  async function submitTurn(args: {
+    draftText: string;
+    attachmentsToSend: PendingAttachmentDraft[];
+    contextItemsToSend: ChatContextItemPayload[];
+    preserveComposerState?: boolean;
+  }) {
     if (!activeThread) {
-      return;
+      return false;
     }
 
-    const currentDraft = draft;
-    const currentAttachments = attachments;
-    const currentContextItems = contextItems;
+    const currentDraft = args.draftText;
+    const currentAttachments = args.attachmentsToSend;
+    const currentContextItems = args.contextItemsToSend;
+    const preserveComposerState = Boolean(args.preserveComposerState);
 
-    setDraft("");
-    setAttachments([]);
+    if (!preserveComposerState) {
+      setDraft("");
+      setAttachments([]);
+    }
     setIsSending(true);
 
     const didSubmit = await runtime.submitTurn({
@@ -375,6 +391,7 @@ export function useChatWorkspace(
       draft: currentDraft,
       attachments: currentAttachments,
       contextItems: currentContextItems,
+      hiddenHostPageContext: options?.hiddenHostPageContext ?? null,
       onOptimisticUpdate(thread) {
         updateThread(thread.id, () => thread);
       },
@@ -386,13 +403,35 @@ export function useChatWorkspace(
       }
     });
 
-    if (!didSubmit) {
+    if (!didSubmit && !preserveComposerState) {
       setDraft(currentDraft);
       setAttachments(currentAttachments);
       setContextItems(currentContextItems);
     }
 
     setIsSending(false);
+    return didSubmit;
+  }
+
+  async function handleSend() {
+    await submitTurn({
+      draftText: draft,
+      attachmentsToSend: attachments,
+      contextItemsToSend: contextItems
+    });
+  }
+
+  async function handleQuickReplySend(replyText: string) {
+    if (isSending) {
+      return;
+    }
+
+    await submitTurn({
+      draftText: replyText,
+      attachmentsToSend: [],
+      contextItemsToSend: contextItems,
+      preserveComposerState: true
+    });
   }
 
   function handleSelectThread(threadId: string) {
@@ -480,6 +519,7 @@ export function useChatWorkspace(
     threads,
     handleAddFiles,
     handleNewThread,
+    handleQuickReplySend,
     handleRemoveAttachment,
     handleSend
   };
@@ -498,6 +538,28 @@ function mergeThreads(remoteThreads: ChatThread[], localThreads: ChatThread[]) {
   }
 
   return normalizeThreadCollection(Array.from(mergedThreads.values()));
+}
+
+function resolveSelectedThreadId(
+  currentSelectedThreadId: string,
+  currentThreads: ChatThread[],
+  mergedThreads: ChatThread[]
+) {
+  if (mergedThreads.some((thread) => thread.id === currentSelectedThreadId)) {
+    return currentSelectedThreadId;
+  }
+
+  const currentSelectedThread = currentThreads.find((thread) => thread.id === currentSelectedThreadId);
+
+  if (currentSelectedThread && isUnsentDraftThread(currentSelectedThread)) {
+    const mergedDraft = mergedThreads.find((thread) => isUnsentDraftThread(thread));
+
+    if (mergedDraft) {
+      return mergedDraft.id;
+    }
+  }
+
+  return mergedThreads[0]?.id ?? currentSelectedThreadId;
 }
 
 function hasThreadAdvancedSinceFinalizationRequest(currentThread: ChatThread, finalizedThread: ChatThread) {

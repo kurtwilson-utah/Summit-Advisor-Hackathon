@@ -1,4 +1,5 @@
 import type { ChatThread, EmailAccessSession } from "../../lib/types";
+import { filterPersistableThreads } from "../../lib/chatEngine";
 import { postJson } from "../api/apiClient";
 
 export interface ThreadSyncProvider {
@@ -27,9 +28,10 @@ export function createThreadSyncProvider(): ThreadSyncProvider {
       return payload.threads;
     },
     async syncThreads(session, threads) {
+      const persistableThreads = filterPersistableThreads(threads);
       await postJson<{ ok: true }>("/api/threads/sync", {
         session,
-        threads
+        threads: persistableThreads
       });
     },
     async finalizeThread({ session, thread, closeReason, keepalive = false }) {

@@ -149,7 +149,8 @@ export function createSupabasePersistenceAdapter(): ConversationPersistenceAdapt
         messagesByThread.set(row.thread_id, currentMessages);
       }
 
-      return threads.map((thread) => ({
+      return threads
+        .map((thread) => ({
         id: thread.id,
         title: thread.title,
         statusLabel: thread.status_label,
@@ -159,7 +160,8 @@ export function createSupabasePersistenceAdapter(): ConversationPersistenceAdapt
         notionStatus: thread.notion_status,
         agentStates: thread.agent_states ?? [],
         messages: messagesByThread.get(thread.id) ?? []
-      }));
+      }))
+        .filter(hasUserStartedThread);
     },
     async saveThreadSnapshot({ session, thread }) {
       const normalizedEmail = normalizeEmail(session.email);
@@ -429,4 +431,8 @@ function isIncomingThreadFresher(existingThread: AdvisorThreadRow, incomingThrea
   }
 
   return new Date(incomingThread.updatedAt).getTime() >= new Date(existingThread.updated_at).getTime();
+}
+
+function hasUserStartedThread(thread: ChatThread) {
+  return thread.messages.some((message) => message.role === "user");
 }

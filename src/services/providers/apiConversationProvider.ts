@@ -5,7 +5,7 @@ import type { ConversationProviderAdapter } from "./conversationProvider";
 
 export function createApiConversationProvider(): ConversationProviderAdapter {
   return {
-    async createAssistantMessage({ thread, userMessage, attachments, contextItems }) {
+    async createAssistantMessage({ thread, userMessage, attachments, contextItems, hiddenHostPageContext }) {
       const totalAttachmentBytes = attachments.reduce((sum, attachment) => sum + attachment.sizeBytes, 0);
 
       if (totalAttachmentBytes > 3_000_000) {
@@ -22,6 +22,7 @@ export function createApiConversationProvider(): ConversationProviderAdapter {
         redactionMap: userMessage.redaction?.entities ?? [],
         attachments: await Promise.all(attachments.map(toAttachmentPayload)),
         contextItems,
+        hiddenHostPageContext,
         memoryDigest: thread.memoryDigest,
         recentMessages: thread.messages.slice(-6).map((message) => ({
           role: message.role,

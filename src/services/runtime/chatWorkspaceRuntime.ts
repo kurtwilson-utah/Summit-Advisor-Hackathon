@@ -6,7 +6,13 @@ import {
   summarizeThread
 } from "../../lib/chatEngine";
 import { redactText } from "../../lib/piiRedaction";
-import type { ChatContextItemPayload, ChatMessage, ChatThread, PendingAttachmentDraft } from "../../lib/types";
+import type {
+  ChatContextItemPayload,
+  ChatMessage,
+  ChatThread,
+  HiddenHostPageContextPayload,
+  PendingAttachmentDraft
+} from "../../lib/types";
 import type { ThreadFinalizationService } from "../finalization/threadFinalizationService";
 import type { TurnOrchestrationService } from "../orchestration/turnOrchestrationService";
 import type { ConversationProviderAdapter } from "../providers/conversationProvider";
@@ -18,6 +24,7 @@ export interface ChatWorkspaceRuntime {
     draft: string;
     attachments: PendingAttachmentDraft[];
     contextItems: ChatContextItemPayload[];
+    hiddenHostPageContext: HiddenHostPageContextPayload | null;
     onOptimisticUpdate: (thread: ChatThread) => void;
     onThinkingStep: (step: ThinkingStepDefinition | null) => void;
     onComplete: (thread: ChatThread) => void;
@@ -33,7 +40,16 @@ export function createChatWorkspaceRuntime(dependencies: {
     createThread(displayName) {
       return createEmptyThread(displayName);
     },
-    async submitTurn({ thread, draft, attachments, contextItems, onOptimisticUpdate, onThinkingStep, onComplete }) {
+    async submitTurn({
+      thread,
+      draft,
+      attachments,
+      contextItems,
+      hiddenHostPageContext,
+      onOptimisticUpdate,
+      onThinkingStep,
+      onComplete
+    }) {
       const trimmedDraft = draft.trim();
 
       if (!trimmedDraft && attachments.length === 0) {
@@ -82,7 +98,8 @@ export function createChatWorkspaceRuntime(dependencies: {
           userMessage,
           decision: plannedTurn.decision,
           attachments,
-          contextItems
+          contextItems,
+          hiddenHostPageContext
         });
       } catch (error) {
         assistantMessage = {

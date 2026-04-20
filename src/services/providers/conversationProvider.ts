@@ -1,5 +1,6 @@
 import type {
   ChatContextItemPayload,
+  HiddenHostPageContextPayload,
   ChatMessage,
   ChatThread,
   OrchestrationDecision,
@@ -13,5 +14,6 @@ export interface ConversationProviderAdapter {
     decision: OrchestrationDecision;
     attachments: PendingAttachmentDraft[];
     contextItems: ChatContextItemPayload[];
+    hiddenHostPageContext: HiddenHostPageContextPayload | null;
   }): Promise<ChatMessage>;
 }

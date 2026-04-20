@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import type { HiddenHostPageContextPayload } from "../lib/types";
 
 interface EmbeddedBootstrapPayload {
   name?: string;
   email?: string;
   pageTitle?: string;
+  hiddenHostPageContext?: HiddenHostPageContextPayload | null;
 }
 
 interface WidgetLifecyclePayload {
@@ -20,6 +22,7 @@ export interface EmbeddedBridgeState {
   isEmbeddedMode: boolean;
   bootstrapUser: { name: string; email: string } | null;
   currentPageTitle: string | null;
+  hiddenHostPageContext: HiddenHostPageContextPayload | null;
   bootstrapReady: boolean;
   widgetOpenSequence: number;
   lastWidgetOpenedAt: number | null;
@@ -36,6 +39,7 @@ export function useEmbeddedBridge(): EmbeddedBridgeState {
   }, []);
   const [bootstrapUser, setBootstrapUser] = useState<{ name: string; email: string } | null>(null);
   const [currentPageTitle, setCurrentPageTitle] = useState<string | null>(null);
+  const [hiddenHostPageContext, setHiddenHostPageContext] = useState<HiddenHostPageContextPayload | null>(null);
   const [bootstrapReady, setBootstrapReady] = useState(false);
   const [widgetOpenSequence, setWidgetOpenSequence] = useState(0);
   const [lastWidgetOpenedAt, setLastWidgetOpenedAt] = useState<number | null>(null);
@@ -70,6 +74,7 @@ export function useEmbeddedBridge(): EmbeddedBridgeState {
 
         setBootstrapUser(nextEmail ? { name: nextName, email: nextEmail } : null);
         setCurrentPageTitle(payload.pageTitle?.trim() ?? null);
+        setHiddenHostPageContext(payload.hiddenHostPageContext ?? null);
         setBootstrapReady(true);
         return;
       }
@@ -103,6 +108,7 @@ export function useEmbeddedBridge(): EmbeddedBridgeState {
     isEmbeddedMode,
     bootstrapUser,
     currentPageTitle,
+    hiddenHostPageContext,
     bootstrapReady,
     widgetOpenSequence,
     lastWidgetOpenedAt,

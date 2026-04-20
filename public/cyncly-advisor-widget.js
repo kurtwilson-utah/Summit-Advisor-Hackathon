@@ -24,6 +24,7 @@
     pointerId: null,
     dragOffsetX: 0,
     dragOffsetY: 0,
+    hostSyncTimeoutId: null,
     locationSignature: getLocationSignature(),
     position: loadPosition()
   };
@@ -104,6 +105,10 @@
         document.removeEventListener("keydown", handleKeyDown);
         window.history.pushState = originalPushState;
         window.history.replaceState = originalReplaceState;
+        if (state.hostSyncTimeoutId) {
+          window.clearTimeout(state.hostSyncTimeoutId);
+        }
+        hostMutationObserver.disconnect();
         titleObserver.disconnect();
         root.remove();
         delete window.CynclyAdvisorWidget;
@@ -112,6 +117,20 @@
 
     const originalPushState = window.history.pushState;
     const originalReplaceState = window.history.replaceState;
+    const hostMutationObserver = new MutationObserver(() => {
+      if (!state.isOpen) {
+        return;
+      }
+
+      if (state.hostSyncTimeoutId) {
+        window.clearTimeout(state.hostSyncTimeoutId);
+      }
+
+      state.hostSyncTimeoutId = window.setTimeout(() => {
+        state.hostSyncTimeoutId = null;
+        syncBootstrap();
+      }, 300);
+    });
 
     function ensureFrameLoaded() {
       if (state.iframeLoaded) {
@@ -144,7 +163,8 @@
       return {
         name: authState && authState.user ? authState.user.name || "" : "",
         email: authState && authState.user ? authState.user.email || "" : "",
-        pageTitle: deriveRouteContextValue()
+        pageTitle: deriveRouteContextValue(),
+        hiddenHostPageContext: buildHiddenHostPageContext()
       };
     }
 
@@ -335,6 +355,14 @@
       titleObserver.observe(titleElement, { childList: true, subtree: true, characterData: true });
     }
 
+    if (document.body) {
+      hostMutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true
+      });
+    }
+
     updateLayout();
   }
 
@@ -381,6 +409,56 @@
     return primarySegment
       .replace(/[-_]+/g, " ")
       .replace(/\b\w/g, (character) => character.toUpperCase());
+  }
+
+  function buildHiddenHostPageContext() {
+    const routeLabel = deriveRouteContextValue();
+    const pageClone = document.body ? document.body.cloneNode(true) : null;
+
+    if (!pageClone || !(pageClone instanceof HTMLElement)) {
+      return {
+        routeLabel: routeLabel,
+        url: window.location.href,
+        pageTitle: document.title || routeLabel,
+        uiText: "",
+        domSnapshot: ""
+      };
+    }
+
+    pageClone.querySelectorAll("script, style, noscript, iframe, canvas, svg").forEach((node) => node.remove());
+    pageClone.querySelectorAll("#cyncly-advisor-widget-root").forEach((node) => node.remove());
+    pageClone.querySelectorAll("[aria-hidden='true']").forEach((node) => {
+      if (node.id !== "cyncly-advisor-widget-root") {
+        node.remove();
+      }
+    });
+
+    const widgetRoot = document.getElementById("cyncly-advisor-widget-root");
+    const previousWidgetDisplay = widgetRoot ? widgetRoot.style.display : "";
+
+    if (widgetRoot) {
+      widgetRoot.style.display = "none";
+    }
+
+    const uiText = normalizeWhitespace(document.body ? document.body.innerText || document.body.textContent || "" : "").slice(0, 6000);
+
+    if (widgetRoot) {
+      widgetRoot.style.display = previousWidgetDisplay;
+    }
+
+    const domSnapshot = normalizeWhitespace(pageClone.innerHTML || "").slice(0, 12000);
+
+    return {
+      routeLabel: routeLabel,
+      url: window.location.href,
+      pageTitle: document.title || routeLabel,
+      uiText: uiText,
+      domSnapshot: domSnapshot
+    };
+  }
+
+  function normalizeWhitespace(value) {
+    return value.replace(/\s+/g, " ").trim();
   }
 
   function safeParse(value) {

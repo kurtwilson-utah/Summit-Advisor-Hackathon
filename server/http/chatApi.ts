@@ -51,6 +51,14 @@ const contextItemSchema = z.object({
   value: z.string()
 });
 
+const hiddenHostPageContextSchema = z.object({
+  routeLabel: z.string(),
+  url: z.string(),
+  pageTitle: z.string(),
+  uiText: z.string(),
+  domSnapshot: z.string()
+});
+
 const threadSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -87,6 +95,7 @@ const chatRequestSchema = z.object({
     )
     .default([]),
   contextItems: z.array(contextItemSchema).default([]),
+  hiddenHostPageContext: hiddenHostPageContextSchema.nullish(),
   memoryDigest: z.string().default(""),
   recentMessages: z
     .array(
@@ -175,6 +184,7 @@ export async function handleChatSend(rawPayload: unknown): Promise<JsonResponse>
     bodyRedacted: payload.bodyRedacted,
     attachments: payload.attachments,
     contextItems: payload.contextItems,
+    hiddenHostPageContext: payload.hiddenHostPageContext ?? null,
     memoryDigest: payload.memoryDigest,
     recentMessages: payload.recentMessages
   });

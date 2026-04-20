@@ -1,5 +1,5 @@
 import { PanelLeft } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Composer } from "./components/Composer";
 import { EmailGate } from "./components/EmailGate";
 import { MessageBubble } from "./components/MessageBubble";
@@ -8,6 +8,7 @@ import { ThinkingIndicator } from "./components/ThinkingIndicator";
 import { useEmailAccess } from "./hooks/useEmailAccess";
 import { useEmbeddedBridge } from "./hooks/useEmbeddedBridge";
 import { useChatWorkspace } from "./hooks/useChatWorkspace";
+import { deriveQuickReplies } from "./lib/quickReplies";
 
 function App() {
   const embeddedBridge = useEmbeddedBridge();
@@ -31,6 +32,7 @@ function App() {
     draft,
     handleAddFiles,
     handleNewThread,
+    handleQuickReplySend,
     handleRemoveContextItem,
     handleRemoveAttachment,
     handleSelectThread,
@@ -43,6 +45,7 @@ function App() {
   } = useChatWorkspace(session, {
     isEmbeddedMode: embeddedBridge.isEmbeddedMode,
     currentPageTitle: embeddedBridge.currentPageTitle,
+    hiddenHostPageContext: embeddedBridge.hiddenHostPageContext,
     widgetOpenSequence: embeddedBridge.widgetOpenSequence,
     lastWidgetOpenedAt: embeddedBridge.lastWidgetOpenedAt,
     lastWidgetClosedAt: embeddedBridge.lastWidgetClosedAt
@@ -50,6 +53,15 @@ function App() {
   const conversationWindowRef = useRef<HTMLElement | null>(null);
   const conversationEndRef = useRef<HTMLDivElement | null>(null);
   const [composerMaxHeight, setComposerMaxHeight] = useState(180);
+  const activeQuickReplies = useMemo(
+    () =>
+      deriveQuickReplies({
+        thread: activeThread,
+        contextItems,
+        isEmbeddedMode: embeddedBridge.isEmbeddedMode
+      }),
+    [activeThread, contextItems, embeddedBridge.isEmbeddedMode]
+  );
 
   function isMobileViewport() {
     return typeof window !== "undefined" && window.matchMedia("(max-width: 940px)").matches;
@@ -220,7 +232,13 @@ function App() {
           <div className="conversation-inner">
             <section className="message-list">
               {activeThread.messages.map((message) => (
-                <MessageBubble key={message.id} message={message} />
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  quickReplies={activeQuickReplies?.messageId === message.id ? activeQuickReplies.options : []}
+                  quickRepliesDisabled={isSending}
+                  onQuickReplySelect={handleQuickReplySend}
+                />
               ))}
               {activeThinkingState?.threadId === activeThread.id ? (
                 <ThinkingIndicator step={activeThinkingState.step} />

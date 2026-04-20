@@ -31,6 +31,14 @@ export interface ChatContextItemPayload {
   value: string;
 }
 
+export interface HiddenHostPageContextPayload {
+  routeLabel: string;
+  url: string;
+  pageTitle: string;
+  uiText: string;
+  domSnapshot: string;
+}
+
 export interface ChatAttachmentPayload {
   id: string;
   name: string;
@@ -58,6 +66,7 @@ export interface ChatTurnRequest {
   redactionMap: unknown[];
   attachments: ChatAttachmentPayload[];
   contextItems: ChatContextItemPayload[];
+  hiddenHostPageContext?: HiddenHostPageContextPayload | null;
   memoryDigest: string;
   recentMessages: ChatTurnMessagePayload[];
 }

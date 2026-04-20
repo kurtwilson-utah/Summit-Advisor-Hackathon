@@ -1,5 +1,5 @@
 import type { ChatThread } from "../../lib/types";
-import { sortThreadsByRecentActivity } from "../../lib/chatEngine";
+import { filterPersistableThreads, sortThreadsByRecentActivity } from "../../lib/chatEngine";
 
 export interface ThreadRepository {
   loadThreads(email: string): ChatThread[] | null;
@@ -33,7 +33,7 @@ export function createLocalThreadRepository(): ThreadRepository {
           return null;
         }
 
-        return sortThreadsByRecentActivity(parsed as ChatThread[]);
+        return filterPersistableThreads(parsed as ChatThread[]);
       } catch {
         return null;
       }
@@ -43,7 +43,14 @@ export function createLocalThreadRepository(): ThreadRepository {
         return;
       }
 
-      window.localStorage.setItem(keyFor(email), JSON.stringify(sortThreadsByRecentActivity(threads)));
+      const persistableThreads = filterPersistableThreads(threads);
+
+      if (persistableThreads.length === 0) {
+        window.localStorage.removeItem(keyFor(email));
+        return;
+      }
+
+      window.localStorage.setItem(keyFor(email), JSON.stringify(sortThreadsByRecentActivity(persistableThreads)));
     },
     subscribeToThreads(email, onThreadsChange) {
       if (typeof window === "undefined" || !email) {
@@ -64,7 +71,7 @@ export function createLocalThreadRepository(): ThreadRepository {
             return;
           }
 
-          onThreadsChange(sortThreadsByRecentActivity(parsed as ChatThread[]));
+          onThreadsChange(filterPersistableThreads(parsed as ChatThread[]));
         } catch {
           // Ignore malformed cross-tab payloads and keep the current tab stable.
         }

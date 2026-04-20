@@ -2,6 +2,7 @@ export type {
   AgentKey,
   AgentStatus,
   ChatContextItemPayload,
+  HiddenHostPageContextPayload,
   OrchestrationDecision,
   ThinkingStepDefinition
 } from "../../shared/chat";

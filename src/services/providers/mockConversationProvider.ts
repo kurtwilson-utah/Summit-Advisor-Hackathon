@@ -4,7 +4,7 @@ import type { ConversationProviderAdapter } from "./conversationProvider";
 
 export function createMockConversationProvider(): ConversationProviderAdapter {
   return {
-    async createAssistantMessage({ thread, userMessage, decision, attachments, contextItems }) {
+    async createAssistantMessage({ thread, userMessage, decision, attachments, contextItems, hiddenHostPageContext }) {
       const delegatedLabels = decision.delegatedAgents.map(getAgentLabel);
 
       const delegatedLine = delegatedLabels.length
@@ -17,6 +17,9 @@ export function createMockConversationProvider(): ConversationProviderAdapter {
       const contextLine = contextItems.length
         ? `This turn also received host context: ${contextItems.map((item) => item.label).join(", ")}.`
         : "No host-app context was supplied for this turn.";
+      const hiddenContextLine = hiddenHostPageContext
+        ? `A hidden host-page snapshot was also supplied for route ${hiddenHostPageContext.routeLabel}.`
+        : "No hidden host-page snapshot was supplied for this turn.";
 
       return {
         id: crypto.randomUUID(),
@@ -27,6 +30,7 @@ export function createMockConversationProvider(): ConversationProviderAdapter {
           delegatedLine,
           attachmentLine,
           contextLine,
+          hiddenContextLine,
           `The current memory digest for this thread is: ${thread.memoryDigest}`,
           `The protected model payload for your latest message begins with: ${userMessage.bodyModel?.slice(0, 120) ?? "(no model payload recorded)"}`,
           "When we swap in the live adapters, this same contract becomes the Claude request plus persistence and finalization hooks."

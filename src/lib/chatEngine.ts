@@ -174,6 +174,10 @@ export function isUnsentDraftThread(thread: ChatThread): boolean {
   );
 }
 
+export function hasUserStartedThread(thread: ChatThread): boolean {
+  return thread.messages.some((message) => message.role === "user");
+}
+
 export function getThreadActivityTimestamp(thread: ChatThread): string {
   return thread.messages[thread.messages.length - 1]?.createdAt ?? thread.updatedAt;
 }
@@ -200,6 +204,10 @@ export function normalizeThreadCollection(threads: ChatThread[]): ChatThread[] {
 
 export function sortThreadsByRecentActivity(threads: ChatThread[]): ChatThread[] {
   return normalizeThreadCollection(threads);
+}
+
+export function filterPersistableThreads(threads: ChatThread[]): ChatThread[] {
+  return normalizeThreadCollection(threads.filter(hasUserStartedThread));
 }
 
 export function summarizeThread(messages: ChatMessage[]): string {

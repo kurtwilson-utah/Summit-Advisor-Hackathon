@@ -2,6 +2,7 @@ import type {
   AgentKey,
   ChatAttachmentPayload,
   ChatContextItemPayload,
+  HiddenHostPageContextPayload,
   ChatTurnMessagePayload,
   OrchestrationDecision,
   RetrievedKnowledgeSource,
@@ -30,6 +31,7 @@ export interface OrchestrationService {
     bodyRedacted: string;
     attachments: ChatAttachmentPayload[];
     contextItems: ChatContextItemPayload[];
+    hiddenHostPageContext?: HiddenHostPageContextPayload | null;
     memoryDigest?: string;
     recentMessages?: ChatTurnMessagePayload[];
   }): Promise<ExecuteTurnResult>;
@@ -42,7 +44,16 @@ export function createOrchestrationService(dependencies: {
   knowledgeRetrievalService: KnowledgeRetrievalService;
 }): OrchestrationService {
   return {
-    async executeTurn({ threadId, threadTitle, bodyRedacted, attachments, contextItems, memoryDigest, recentMessages = [] }) {
+    async executeTurn({
+      threadId,
+      threadTitle,
+      bodyRedacted,
+      attachments,
+      contextItems,
+      hiddenHostPageContext,
+      memoryDigest,
+      recentMessages = []
+    }) {
       const persistedContext = await dependencies.persistenceService.loadThreadContext(threadId);
       const processedAttachments = await dependencies.attachmentProcessingService.processAttachments({
         threadId,
@@ -71,6 +82,7 @@ export function createOrchestrationService(dependencies: {
               recentMessages,
               attachments,
               contextItems,
+              hiddenHostPageContext,
               processedAttachments: processedAttachments.attachments,
               instructions: [
                 "Use only the supplied Summit knowledge snippets.",
@@ -93,6 +105,7 @@ export function createOrchestrationService(dependencies: {
               memoryDigest: effectiveMemoryDigest,
               recentMessages,
               contextItems,
+              hiddenHostPageContext,
               processedAttachments: processedAttachments.attachments
             }),
             maxTokens: 500
@@ -113,6 +126,7 @@ export function createOrchestrationService(dependencies: {
             recentMessages,
             attachments,
             contextItems,
+            hiddenHostPageContext,
             processedAttachments: processedAttachments.attachments,
             knowledgeMemo,
             researchMemo,
@@ -219,12 +233,14 @@ function buildSpecialistPrompt(args: {
   processedAttachments: ProcessedChatAttachment[];
   instructions: string[];
   sources: RetrievedKnowledgeSource[];
+  hiddenHostPageContext?: HiddenHostPageContextPayload | null;
 }) {
   return [
     `Customer message:\n${args.userMessage}`,
     `Thread memory digest:\n${args.memoryDigest}`,
     formatRecentMessages(args.recentMessages),
     formatContextItems(args.contextItems),
+    formatHiddenHostPageContext(args.hiddenHostPageContext),
     formatAttachments(args.attachments),
     formatProcessedAttachments(args.processedAttachments),
     `Retrieved knowledge for this turn:\n${formatSources(args.sources)}`,
@@ -240,6 +256,7 @@ function buildResearchPrompt(args: {
   memoryDigest: string;
   recentMessages: ChatTurnMessagePayload[];
   contextItems: ChatContextItemPayload[];
+  hiddenHostPageContext?: HiddenHostPageContextPayload | null;
   processedAttachments: ProcessedChatAttachment[];
 }) {
   return [
@@ -247,6 +264,7 @@ function buildResearchPrompt(args: {
     `Thread memory digest:\n${args.memoryDigest}`,
     formatRecentMessages(args.recentMessages),
     formatContextItems(args.contextItems),
+    formatHiddenHostPageContext(args.hiddenHostPageContext),
     formatProcessedAttachments(args.processedAttachments),
     "Constraints:",
     "- Live web browsing is not available in this runtime.",
@@ -265,6 +283,7 @@ function buildPrimaryPrompt(args: {
   recentMessages: ChatTurnMessagePayload[];
   attachments: ChatAttachmentPayload[];
   contextItems: ChatContextItemPayload[];
+  hiddenHostPageContext?: HiddenHostPageContextPayload | null;
   processedAttachments: ProcessedChatAttachment[];
   knowledgeMemo: string;
   researchMemo: string;
@@ -277,6 +296,7 @@ function buildPrimaryPrompt(args: {
     `Compressed thread memory:\n${args.memoryDigest}`,
     formatRecentMessages(args.recentMessages),
     formatContextItems(args.contextItems),
+    formatHiddenHostPageContext(args.hiddenHostPageContext),
     formatAttachments(args.attachments),
     formatProcessedAttachments(args.processedAttachments),
     args.knowledgeMemo ? `Summit Knowledge Agent memo:\n${args.knowledgeMemo}` : "",
@@ -327,6 +347,24 @@ function formatContextItems(contextItems: ChatContextItemPayload[]) {
   return `Host app context for this turn:\n${contextItems
     .map((item) => `- ${item.label}: ${item.value}`)
     .join("\n")}`;
+}
+
+function formatHiddenHostPageContext(hiddenHostPageContext?: HiddenHostPageContextPayload | null) {
+  if (!hiddenHostPageContext) {
+    return "";
+  }
+
+  return [
+    "Hidden host-page UI context for this turn:",
+    `- Route label: ${hiddenHostPageContext.routeLabel}`,
+    `- URL: ${hiddenHostPageContext.url}`,
+    `- Page title: ${hiddenHostPageContext.pageTitle}`,
+    "Use this as supplemental grounding for the current Summit screen. This is rendered page context from the host app, not canonical product documentation. Do not quote raw markup or mention hidden page context in the user-facing reply.",
+    hiddenHostPageContext.uiText ? `Visible UI text snapshot:\n${hiddenHostPageContext.uiText}` : "",
+    hiddenHostPageContext.domSnapshot ? `Rendered DOM snapshot:\n${hiddenHostPageContext.domSnapshot}` : ""
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 function formatProcessedAttachments(attachments: ProcessedChatAttachment[]) {

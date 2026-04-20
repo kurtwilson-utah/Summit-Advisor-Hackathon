@@ -1,5 +1,9 @@
 import { FileSpreadsheet, FileText, Image, Sparkles, Video } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
+import remarkGfm from "remark-gfm";
 import { formatTimestamp } from "../lib/chatEngine";
+import type { QuickReplyOption } from "../lib/quickReplies";
 import type { AttachmentKind, ChatMessage } from "../lib/types";
 
 const attachmentIcons: Record<AttachmentKind, typeof Image> = {
@@ -13,9 +17,17 @@ const attachmentIcons: Record<AttachmentKind, typeof Image> = {
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  quickReplies?: QuickReplyOption[];
+  onQuickReplySelect?: (value: string) => void;
+  quickRepliesDisabled?: boolean;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  quickReplies = [],
+  onQuickReplySelect,
+  quickRepliesDisabled = false
+}: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   return (
@@ -34,7 +46,33 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           </div>
         </div>
 
-        <p>{message.bodyDisplay}</p>
+        <div className="message-body">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm, remarkBreaks]}
+            components={{
+              a: ({ node, ...props }) => <a {...props} rel="noreferrer" target="_blank" />,
+              code: ({ className, children, ...props }) => {
+                const isBlock = Boolean(className?.includes("language-"));
+
+                if (isBlock) {
+                  return (
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  );
+                }
+
+                return (
+                  <code {...props}>
+                    {children}
+                  </code>
+                );
+              }
+            }}
+          >
+            {message.bodyDisplay}
+          </ReactMarkdown>
+        </div>
 
         {message.attachments?.length ? (
           <div className="attachment-stack">
@@ -49,6 +87,22 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                 </div>
               );
             })}
+          </div>
+        ) : null}
+
+        {quickReplies.length ? (
+          <div className="message-quick-replies">
+            {quickReplies.map((quickReply) => (
+              <button
+                key={quickReply.id}
+                className="quick-reply-button"
+                disabled={quickRepliesDisabled}
+                onClick={() => onQuickReplySelect?.(quickReply.value)}
+                type="button"
+              >
+                {quickReply.label}
+              </button>
+            ))}
           </div>
         ) : null}
       </div>
